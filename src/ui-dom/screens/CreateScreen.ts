@@ -96,7 +96,7 @@ export const CreateScreen: ScreenRenderer = (ctx) => {
       on: { change: (e) => { const v = (e.target as HTMLSelectElement).value; d.titleId = v || null; } },
     },
     h('option', { value: '' }, t('common.none')),
-    ...titles.map((ti) => h('option', { value: ti.id }, `${ti.name} — ${ti.description}`)),
+    ...titles.map((ti) => h('option', { value: ti.id }, t('format.nameText', { name: ti.name, text: ti.description }))),
   );
   titleSelect.value = d.titleId ?? '';
 

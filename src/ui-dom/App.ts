@@ -78,7 +78,21 @@ export class App {
 
     const renderer = this.opts.screens[s.screen];
     clear(this.uiEl);
-    this.uiEl.appendChild(renderer ? renderer(this.ctx) : h('div', { class: 'panel' }, t('screen.wip')));
+    try {
+      this.uiEl.appendChild(renderer ? renderer(this.ctx) : h('div', { class: 'panel' }, t('screen.wip')));
+    } catch (e) {
+      const msg = t('notice.unexpected', { msg: (e as Error).message ?? String(e) });
+      if (s.screen !== 'error') {
+        // fail() troca para a ErrorScreen e redesenha (re-entrante); o que vem abaixo já foi feito lá.
+        this.store.fail(msg);
+        return;
+      }
+      // A própria ErrorScreen falhou: painel mínimo, sem depender de nenhuma tela.
+      clear(this.uiEl);
+      this.uiEl.appendChild(
+        h('div', { class: 'screen panel' }, h('h1', {}, t('error.title')), h('pre', { class: 'muted' }, msg), button(t('error.reload'), () => window.location.reload(), { primary: true })),
+      );
+    }
 
     clear(this.toastEl);
     for (const n of s.notices) {
@@ -87,7 +101,7 @@ export class App {
           'div',
           { class: `toast ${n.kind}`, attrs: { role: n.kind === 'error' ? 'alert' : 'status' } },
           h('span', {}, n.text),
-          button('×', () => this.store.dismissNotice(n.id), { title: t('common.close') }),
+          button('×', () => this.store.dismissNotice(n.id), { title: t('common.close'), attrs: { 'aria-label': t('common.close') } }),
         ),
       );
     }

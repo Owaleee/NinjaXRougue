@@ -160,7 +160,7 @@ export class GameStore {
     try {
       (this.deps.validateData ?? (() => assertGameData()))();
     } catch (e) {
-      this.set({ screen: 'error', fatalError: (e as Error).message });
+      this.fail(t('notice.unexpected', { msg: (e as Error).message ?? String(e) }));
       return;
     }
     const now = this.deps.now();
@@ -180,7 +180,12 @@ export class GameStore {
     let finalMeta = meta;
     if (run && (run.phase === 'dead' || run.phase === 'victory')) {
       // Run encerrada cuja meta não chegou a ser gravada: refinaliza (idempotente).
-      finalMeta = recordRunEnd(meta, run, run.phase, now).meta;
+      try {
+        finalMeta = recordRunEnd(meta, run, run.phase, now).meta;
+      } catch (e) {
+        this.fail(t('notice.unexpected', { msg: (e as Error).message ?? String(e) }));
+        return;
+      }
       this.set({ notices });
       this.finalizeStorage(finalMeta, run);
       notices.splice(0, notices.length, ...this.s.notices);
@@ -192,11 +197,12 @@ export class GameStore {
   // ------------------------------------------------------------ navegação
 
   go(screen: ScreenId): void {
-    if (screen === this.s.screen) return;
+    if (this.navBlocked() || screen === this.s.screen) return;
     this.set({ history: [...this.s.history, this.s.screen], screen });
   }
 
   back(): void {
+    if (this.navBlocked()) return;
     const history = [...this.s.history];
     const prev = history.pop();
     const fallback: ScreenId = this.hasActiveRun() && this.s.run ? screenForRun(this.s.run) : 'menu';
@@ -204,9 +210,11 @@ export class GameStore {
   }
 
   toMenu(): void {
+    if (this.navBlocked()) return;
     this.deferredNav = false;
     this.set({
       locked: false,
+      swapQueue: [],
       screen: 'menu',
       history: [],
       run: this.hasActiveRun() ? this.s.run : null,
@@ -316,9 +324,35 @@ export class GameStore {
 
   // ------------------------------------------------------------ internos
 
+  /** Durante a animação da batalha a navegação espera (spec §10). */
+  private navBlocked(): boolean {
+    return this.s.locked && this.s.screen === 'battle';
+  }
+
   private set(patch: Partial<UiState>): void {
     this.s = { ...this.s, ...patch };
-    for (const fn of this.listeners) fn(this.s);
+    for (const fn of Array.from(this.listeners)) {
+      try {
+        fn(this.s);
+      } catch (e) {
+        this.fail(t('notice.unexpected', { msg: (e as Error).message ?? String(e) }));
+        return;
+      }
+    }
+  }
+
+  private failing = false;
+
+  /** Erro fatal: vai para a ErrorScreen e solta qualquer trava de animação. */
+  fail(message: string): void {
+    this.deferredNav = false;
+    if (this.failing) return;
+    this.failing = true;
+    try {
+      this.set({ screen: 'error', fatalError: message, locked: false });
+    } finally {
+      this.failing = false;
+    }
   }
 
   private mkNotice(kind: Notice['kind'], text: string): Notice {
@@ -327,7 +361,7 @@ export class GameStore {
 
   private handleError(e: unknown): void {
     if (e instanceof RuleError) return this.notify('error', e.message);
-    this.set({ screen: 'error', fatalError: t('notice.unexpected', { msg: (e as Error).message ?? String(e) }) });
+    this.fail(t('notice.unexpected', { msg: (e as Error).message ?? String(e) }));
   }
 
   private persist(run: RunState): void {
@@ -401,9 +435,14 @@ export class GameStore {
     let meta = this.s.meta;
     let runEnd = this.s.runEnd;
     if (run.phase === 'dead' || run.phase === 'victory') {
-      const rec = this.recordEnd(run, run.phase === 'dead' ? 'dead' : 'victory');
-      meta = rec.meta;
-      runEnd = rec.info;
+      try {
+        const rec = this.recordEnd(run, run.phase === 'dead' ? 'dead' : 'victory');
+        meta = rec.meta;
+        runEnd = rec.info;
+      } catch (e) {
+        this.handleError(e);
+        return false;
+      }
     } else {
       this.persist(run);
     }
@@ -430,8 +469,19 @@ export class GameStore {
     if (animate) {
       // A batalha precisa estar na tela para ser animada; sair dela espera a animação.
       if (this.s.screen !== 'battle') this.set({ screen: 'battle', history: [] });
+      if (this.s.screen === 'error') return true;
       this.deferredNav = run.phase !== 'battle';
-      for (const fnA of this.animators) fnA(events);
+      let failed = false;
+      for (const fnA of Array.from(this.animators)) {
+        try {
+          fnA(events);
+        } catch (e) {
+          failed = true;
+          this.notify('error', t('notice.unexpected', { msg: (e as Error).message ?? String(e) }));
+        }
+      }
+      // Animação quebrada não pode prender o jogador: solta a trava e aplica a navegação adiada.
+      if (failed) this.animationsDone();
     } else if (run.phase !== before.phase) {
       this.set({ screen: screenForRun(run), history: [] });
     }

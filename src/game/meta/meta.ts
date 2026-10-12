@@ -115,7 +115,7 @@ export function recordRunEnd(
   now: number,
 ): { meta: MetaState; newTitles: string[] } {
   const id = `run-${run.startedAt}-${run.seed}`;
-  if (meta.lastRecordedRunId === id || meta.history.some((h) => h.id === id)) return { meta, newTitles: [] };
+  if (meta.lastRecordedRunId === id || meta.history.some((h) => h?.id === id)) return { meta, newTitles: [] };
   const m = structuredClone(meta);
   m.lastRecordedRunId = id;
   const c = run.character;

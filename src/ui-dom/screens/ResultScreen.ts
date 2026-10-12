@@ -93,7 +93,7 @@ export const ResultScreen: ScreenRenderer = (ctx) => {
               'div',
               { class: 'card' },
               button(
-                `${isTrain && training ? '✓ ' : ''}${t(REWARD_TEXT[o].name)}`,
+                isTrain && training ? t('result.trainingMark', { label: t(REWARD_TEXT[o].name) }) : t(REWARD_TEXT[o].name),
                 () => {
                   if (isTrain) {
                     ui.training = !training;

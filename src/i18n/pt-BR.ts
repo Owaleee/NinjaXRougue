@@ -243,6 +243,8 @@ export const PT_BR = {
   'format.dot': ' · ',
   'tabs.activeMark': '✓',
   'format.join': ', ',
+  'format.nameText': '{name} — {text}',
+  'result.trainingMark': '✓ {label}',
   'radar.label': 'Radar de atributos: contorno tracejado é o atributo base, área preenchida é o efetivo',
   'sheet.rep': 'Reputação',
   'sheet.ryo': 'Ryo',

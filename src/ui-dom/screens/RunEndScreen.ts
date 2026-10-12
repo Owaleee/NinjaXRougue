@@ -18,7 +18,7 @@ export const RunEndScreen: ScreenRenderer = (ctx) => {
     'div',
     { class: 'screen panel' },
     h('h1', {}, heading),
-    h('p', {}, `${info.name} — ${info.text}`),
+    h('p', {}, t('format.nameText', { name: info.name, text: info.text })),
     h('h3', {}, t('runEnd.stats')),
     h(
       'table',

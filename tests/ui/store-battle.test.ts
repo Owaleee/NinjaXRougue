@@ -243,7 +243,7 @@ describe('GameStore — trava de animação', () => {
     expect(store.fight()).toBe(true); // comandos aceitos
   });
 
-  it('toMenu zera a trava e a navegação adiada', () => {
+  it('toMenu é ignorado na batalha travada e funciona depois da animação (achado 3 da revisão final)', () => {
     const { store } = scenario((run) => {
       run.character.hp = 1;
     });
@@ -256,8 +256,12 @@ describe('GameStore — trava de animação', () => {
     }
     expect(store.state.locked).toBe(true);
     store.toMenu();
-    expect(store.state.locked).toBe(false);
+    expect(store.state.locked).toBe(true);
+    expect(store.state.screen).toBe('battle');
     store.animationsDone();
+    expect(store.state.screen).toBe('runEnd');
+    store.toMenu();
     expect(store.state.screen).toBe('menu');
+    expect(store.state.locked).toBe(false);
   });
 });

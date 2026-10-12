@@ -212,6 +212,8 @@ export function loadMeta(store: KeyValueStore, now: number): LoadResult<MetaStat
     MetaShape.parse(data);
     const meta = data as unknown as MetaState;
     meta.lastRecordedRunId ??= null;
+    // Entradas que não são objetos (null, número...) derrubariam o histórico e o registro de fim de run.
+    meta.history = meta.history.filter((e) => typeof e === 'object' && e !== null && !Array.isArray(e));
     return { value: meta, error: null };
   } catch (e) {
     const kept = quarantine(store, `nxr.meta.corrupt.${now}`, META_KEY, raw);
