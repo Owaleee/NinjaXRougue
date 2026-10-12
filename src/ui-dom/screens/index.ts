@@ -4,6 +4,9 @@ import { CreateScreen } from './CreateScreen';
 import { ErrorScreen } from './ErrorScreen';
 import { MapScreen } from './MapScreen';
 import { MenuScreen } from './MenuScreen';
+import { swapOverlay } from '../components/swap';
+import { PrepScreen } from './PrepScreen';
+import { SheetScreen } from './SheetScreen';
 import { ResultScreen } from './ResultScreen';
 import { RunEndScreen } from './RunEndScreen';
 
@@ -15,8 +18,10 @@ export const SCREENS: Partial<Record<ScreenId, ScreenRenderer>> = {
   map: MapScreen,
   result: ResultScreen,
   runEnd: RunEndScreen,
+  prep: PrepScreen,
+  sheet: SheetScreen,
 };
 
 export const KEYS: Partial<Record<ScreenId, KeyHandler>> = {};
 
-export const OVERLAY: ((ctx: ScreenCtx) => HTMLElement | null) | null = null;
+export const OVERLAY: ((ctx: ScreenCtx) => HTMLElement | null) | null = swapOverlay;
