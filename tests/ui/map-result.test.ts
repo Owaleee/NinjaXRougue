@@ -148,16 +148,27 @@ describe('Resultado: Treino, metas e título', () => {
     expect(root.textContent).not.toContain('Treinar qual jutsu?');
   });
 
-  it('metas "Faltam X para Y" usam o atributo BASE: pontos não gastos não mudam a meta', () => {
-    const goalText = (root: HTMLElement) =>
-      Array.from(root.querySelectorAll('li')).filter((li) => li.textContent?.startsWith('Faltam')).map((li) => li.textContent);
-    const a = resultScenario([]);
-    const goalsA = goalText(a.root);
-    expect(goalsA.length).toBeGreaterThan(0);
-    const b = resultScenario([], (run) => {
+  const goalTexts = (root: HTMLElement) =>
+    Array.from(root.querySelectorAll('li')).filter((li) => li.textContent?.startsWith('Faltam')).map((li) => li.textContent);
+
+  it('metas "Faltam X para Y" usam o atributo BASE, não o efetivo nem os pontos livres', () => {
+    // Base tai 5; sennen_goroshi exige tai 6 (falta 1). A Katana dá +4 tai: com o EFETIVO (9) a meta sumiria.
+    const { root, store } = resultScenario([], (run) => {
+      run.character.equipment.weapon = 'katana';
       run.character.unspentPoints = 30;
     });
-    expect(goalText(b.root)).toEqual(goalsA);
+    expect(store.state.run!.character.baseAttrs.tai).toBe(5);
+    expect(goalTexts(root)[0]).toBe('Faltam 1 de Taijutsu para Sennen Goroshi');
+  });
+
+  it('meta com duas exigências junta as partes com " e "', () => {
+    // Clã Uzumaki, base int 13 e nin 7: Kongou Fuusa exige int 14 e nin 8 (falta 1 de cada; entra no top 3 por ser perto).
+    const { root } = resultScenario([], (run) => {
+      run.character.clan = 'uzumaki';
+      run.character.baseAttrs.int = 13;
+      run.character.baseAttrs.nin = 7;
+    });
+    expect(goalTexts(root)).toContain('Faltam 1 de Inteligência e 1 de Ninjutsu para Kongou Fuusa');
   });
 });
 
