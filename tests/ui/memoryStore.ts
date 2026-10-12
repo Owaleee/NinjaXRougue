@@ -1,7 +1,9 @@
 import { GameStore, type StoreDeps } from '../../src/store/GameStore';
-import type { CreateParams } from '../../src/game/progression/character';
 import type { RunState } from '../../src/game/run/types';
 import { RUN_KEY, type KeyValueStore } from '../../src/game/save/save';
+import { emptyAttributes } from '../../src/game/attributes';
+import { characterMaxChakra, characterMaxHp, type CreateParams } from '../../src/game/progression/character';
+import { botAction } from '../../src/game/sim/bot';
 
 /** localStorage de mentira. `failWrites` simula cota estourada / modo privado. */
 export class MemoryStore implements KeyValueStore {
@@ -46,4 +48,36 @@ export function patchRun(storage: MemoryStore, fn: (run: RunState) => void): voi
   const run = JSON.parse(raw) as RunState;
   fn(run);
   storage.data.set(RUN_KEY, JSON.stringify(run));
+}
+
+export function strong(run: RunState): void {
+  run.character.baseAttrs = emptyAttributes(40);
+  run.character.hp = characterMaxHp(run.character);
+  run.character.chakra = characterMaxChakra(run.character);
+}
+
+/** Cria a run, aplica o patch no save e devolve um store "recarregado" já no mapa. */
+export function scenario(patch?: (run: RunState) => void): { store: GameStore; storage: MemoryStore } {
+  const storage = new MemoryStore();
+  const a = makeStore(storage);
+  a.boot();
+  a.startNewRun(PARAMS);
+  if (patch) patchRun(storage, patch);
+  const store = makeStore(storage);
+  store.boot();
+  store.continueRun();
+  return { store, storage };
+}
+
+/** Joga a batalha com o robô do simulador, liberando a trava se houver animador. */
+export function playBattle(store: GameStore): void {
+  let guard = 0;
+  let jd = false;
+  while (store.state.run?.phase === 'battle' && guard++ < 500) {
+    if (store.state.locked) store.animationsDone();
+    const b = store.state.run.battle!;
+    const a = botAction(b, jd);
+    jd = a.type === 'defend';
+    store.act(a);
+  }
 }

@@ -204,7 +204,9 @@ export class GameStore {
   }
 
   toMenu(): void {
+    this.deferredNav = false;
     this.set({
+      locked: false,
       screen: 'menu',
       history: [],
       run: this.hasActiveRun() ? this.s.run : null,
@@ -228,12 +230,13 @@ export class GameStore {
       return this.handleError(e);
     }
     this.persist(run);
-    this.set({ run, screen: screenForRun(run), history: [], battleLog: [], swapQueue: [], runEnd: null, battleSnapshot: null });
+    this.deferredNav = false;
+    this.set({ run, locked: false, screen: screenForRun(run), history: [], battleLog: [], swapQueue: [], runEnd: null, battleSnapshot: null });
   }
 
   abandonRun(): void {
     const run = this.s.run;
-    if (!run || !this.hasActiveRun()) return;
+    if (this.s.locked || !run || !this.hasActiveRun()) return;
     const { meta } = this.recordEnd(run, 'abandoned');
     this.set({ run: null, meta, runEnd: null, swapQueue: [], battleLog: [], battleSnapshot: null });
   }
@@ -287,7 +290,7 @@ export class GameStore {
   /** Decide o primeiro jutsu da fila de troca: substituir `replaceId` ou (null) deixar no repertório. */
   resolveSwap(replaceId: string | null): void {
     const jutsuId = this.s.swapQueue[0];
-    if (!jutsuId) return;
+    if (this.s.locked || !jutsuId) return;
     if (replaceId && !this.step((r) => ({ run: RM.equipJutsuInRun(r, jutsuId, replaceId) }))) return;
     this.set({ swapQueue: this.s.swapQueue.slice(1) });
   }
