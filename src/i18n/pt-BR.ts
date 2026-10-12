@@ -16,6 +16,8 @@ export const PT_BR = {
   'common.level': 'Nível {n}',
   'common.none': 'Nenhum',
   'notice.saveFailed': 'Não foi possível salvar o progresso (armazenamento cheio ou bloqueado). O jogo continua, mas pode se perder ao fechar a aba.',
+  'notice.runExists': 'Já existe uma run em andamento. Abandone-a no menu antes de começar outra.',
+  'notice.noRun': 'Nenhuma run em andamento.',
   'notice.unexpected': 'Erro inesperado: {msg}',
   'error.title': 'Algo deu errado',
   'error.reload': 'Recarregar o jogo',
