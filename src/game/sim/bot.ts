@@ -7,6 +7,7 @@ import { attackExpected, expectedDamage } from '../combat/ai';
 import { getEnemy, getPlayer } from '../combat/battle';
 import { costFor } from '../combat/cost';
 import type { Action, BattleState } from '../combat/types';
+import { EFFECTS } from '../../data/effects';
 import { activeTransformation } from '../effects/EffectSystem';
 import { mostUsedJutsu } from '../meta/stats';
 import { masteryLevelFromUses } from '../progression/mastery';
@@ -41,8 +42,6 @@ const BOT_DEFEND_HP_PCT = 0.25;
 const BOT_PILL_CHAKRA_PCT = 0.3;
 /** Sem jutsu utilizável, abaixo desta fração de chakra o robô medita. */
 const BOT_MEDITATE_CHAKRA_PCT = 0.5;
-/** Chakra mínimo para o robô ligar a transformação (Sharingan). */
-const BOT_TRANSFORM_MIN_CHAKRA = 20;
 /** Trava de segurança contra simulação em laço infinito. */
 const BOT_MAX_STEPS = 5000;
 
@@ -93,7 +92,9 @@ export function botShop(run: RunState, build: BuildDef): RunState {
       if (c.ownedEquipment.includes(id) || !r.shop.equipment.includes(id)) continue;
       if (id === 'katana' && !taiBuild) continue;
     }
-    if (c.ryo < priceOf(id, c)) continue;
+    // Interpretação do A.5: compra estrita na ordem. Sem ryo para o próximo
+    // item, o robô para e poupa (não gasta em itens mais baixos da lista).
+    if (c.ryo < priceOf(id, c)) break;
     r = buyInRun(r, id);
     if (item.kind === 'weapon' || item.kind === 'armor') r = equipItemInRun(r, id);
   }
@@ -121,14 +122,20 @@ export function botReward(run: RunState): RunState {
   return chooseReward(run, option, option === 'treino' ? run.character.equipped[0] : undefined);
 }
 
-export function botAction(s: BattleState): Action {
+/**
+ * `justDefended`: o robô defendeu no turno anterior. Nunca defende dois turnos
+ * seguidos (evita a espiral de defesa até a morte). O chamador guarda o flag,
+ * pois `defending` do combatente é zerado no início de cada turno.
+ */
+export function botAction(s: BattleState, justDefended = false): Action {
   const me = getPlayer(s);
   const foe = getEnemy(s);
   if (s.onlyKai) {
     const kai = me.jutsus.find((id) => JUTSUS[id]?.cleanse);
     if (kai) return { type: 'jutsu', jutsuId: kai };
   }
-  if (me.transformationId && !activeTransformation(me) && !s.transformToggled && me.chakra >= BOT_TRANSFORM_MIN_CHAKRA) {
+  const transf = me.transformationId ? EFFECTS[me.transformationId] : undefined;
+  if (transf && !activeTransformation(me) && !s.transformToggled && me.chakra >= (transf.activationCost ?? 0) + (transf.upkeepPerTurn ?? 0)) {
     return { type: 'transform' };
   }
   const hpPct = me.hp / me.maxHp;
@@ -136,7 +143,7 @@ export function botAction(s: BattleState): Action {
   if (foe.isBoss && me.chakra < me.maxChakra * BOT_PILL_CHAKRA_PCT && (me.inventory['pilula_chakra'] ?? 0) > 0) {
     return { type: 'item', itemId: 'pilula_chakra' };
   }
-  if (hpPct < BOT_DEFEND_HP_PCT) return { type: 'defend' };
+  if (hpPct < BOT_DEFEND_HP_PCT && !justDefended) return { type: 'defend' };
   const usable = me.jutsus
     .map((id) => JUTSUS[id])
     .filter((j): j is NonNullable<typeof j> => !!j && j.power !== null && costFor(me, j) <= me.chakra)
@@ -192,7 +199,12 @@ export function simulateRun(build: BuildDef, seed: number): RunOutcome {
     run = botLoadout(botShop(botAllocate(run, build), build));
     if (currentNode(run).enemyId === 'zabuza') out.reachedZabuza = true;
     run = startEncounter(run).run;
-    while (run.phase === 'battle' && run.battle) run = battleAction(run, botAction(run.battle), { inPlace: true }).run;
+    let justDefended = false;
+    while (run.phase === 'battle' && run.battle) {
+      const action = botAction(run.battle, justDefended);
+      justDefended = action.type === 'defend';
+      run = battleAction(run, action, { inPlace: true }).run;
+    }
     const res = run.lastResult;
     if (!res) continue;
     if (res.enemyId === 'zabuza') {

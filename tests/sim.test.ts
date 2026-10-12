@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { allocationByWeights, simulateRun } from '../src/game/sim/bot';
+import { allocationByWeights, botAction, simulateRun } from '../src/game/sim/bot';
 import { SIM_BUILDS } from '../src/game/sim/builds';
 import { checkTargets, formatTable, simulateMany } from '../src/game/sim/report';
+import type { BattleState } from '../src/game/combat/types';
+import { makeCombatant } from './helpers';
 import { emptyAttributes, sumAttributes } from '../src/game/attributes';
 
 describe('simulador', () => {
@@ -29,5 +31,13 @@ describe('simulador', () => {
     expect(checkTargets([focusedBad]).some((f) => f.includes('hpEndCommon'))).toBe(true);
     const unfocused = { ...focusedBad, build: { ...focusedBad.build, focused: false } };
     expect(checkTargets([unfocused])).toEqual([]);
+  });
+
+  it('nunca defende dois turnos seguidos', () => {
+    const me = makeCombatant({ id: 'player', side: 'player', hp: 10, inventory: {} });
+    const foe = makeCombatant({ id: 'e', side: 'enemy', ai: 'basic' });
+    const s: BattleState = { combatants: [me, foe], round: 1, order: [], turnPos: 0, activeId: 'player', status: 'awaitingInput', winner: null, transformToggled: false, onlyKai: false };
+    expect(botAction(s).type).toBe('defend');
+    expect(botAction(s, true).type).not.toBe('defend');
   });
 });
