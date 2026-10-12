@@ -74,7 +74,8 @@ describe('GameStore — batalha', () => {
     // o HUD ainda tem o que desenhar durante a última animação:
     expect(store.state.battleLog.some((l) => l.text.includes('foi derrotado'))).toBe(true);
     const snap = store.state.battleSnapshot;
-    if (snap) expect(snap.combatants.find((c) => c.side === 'player')?.hp).toBe(0);
+    expect(snap).not.toBeNull();
+    expect(snap!.combatants.find((c) => c.side === 'player')?.hp).toBe(0);
     store.animationsDone();
     expect(store.state.screen).toBe('runEnd');
     expect(store.state.runEnd?.result).toBe('dead');
@@ -121,18 +122,57 @@ describe('GameStore — troca de jutsu e escolhas 1-de-3', () => {
     expect(store.state.run?.lastResult?.levelsGained).toBe(3);
     expect(store.state.run?.pendingChoices).toHaveLength(3);
     expect(store.state.swapQueue.length).toBeGreaterThan(0);
-    const swaps = [...store.state.swapQueue];
+    const offers = structuredClone(store.state.run!.pendingChoices);
 
+    // (b) resolve a fila de troca INTEIRA antes de qualquer escolha
+    let guard = 0;
+    while (store.state.swapQueue.length > 0 && guard++ < 20) store.resolveSwap(null);
+    expect(store.state.swapQueue).toEqual([]);
+
+    // (c) as 3 escolhas seguem pendentes, na mesma ordem
+    expect(store.state.run?.pendingChoices).toEqual(offers);
     expect(store.continueFromResult()).toBe(false); // escolhas pendentes
-    for (let i = 3; i > 0; i--) {
+
+    // (d) escolhe uma a uma, sempre a primeira oferta restante
+    for (let i = 0; i < 3; i++) {
       const run = store.state.run!;
+      expect(run.pendingChoices).toEqual(offers.slice(i));
       const option = run.pendingChoices[0]![0]!;
       expect(store.chooseReward(option, option === 'treino' ? run.character.equipped[0] : undefined)).toBe(true);
-      expect(store.state.run?.pendingChoices).toHaveLength(i - 1);
+      expect(store.state.run?.pendingChoices).toEqual(offers.slice(i + 1));
     }
-    expect(store.state.swapQueue).toEqual(swaps);
     expect(store.continueFromResult()).toBe(true);
     expect(store.state.screen).toBe('map');
+  });
+
+  it('com animador: resolveSwap ignorado travado; depois de animationsDone fila e escolhas intactas e em ordem', () => {
+    const { store } = scenario((run) => {
+      strong(run);
+      run.character.xp = 200;
+    });
+    store.onBattleEvents(() => {});
+    store.fight();
+    playBattle(store); // libera a trava a cada ação; a última animação fica pendente
+    expect(store.state.run?.phase).toBe('result');
+    expect(store.state.locked).toBe(true);
+    const offers = structuredClone(store.state.run!.pendingChoices);
+    const queue = [...store.state.swapQueue];
+    expect(offers).toHaveLength(3);
+    expect(queue.length).toBeGreaterThan(0);
+
+    store.resolveSwap(null);
+    expect(store.state.swapQueue).toEqual(queue);
+    expect(store.chooseReward('treino', store.state.run!.character.equipped[0])).toBe(false);
+    expect(store.state.run?.pendingChoices).toEqual(offers);
+
+    store.animationsDone();
+    expect(store.state.screen).toBe('result');
+    expect(store.state.swapQueue).toEqual(queue);
+    expect(store.state.run?.pendingChoices).toEqual(offers);
+    let guard = 0;
+    while (store.state.swapQueue.length > 0 && guard++ < 20) store.resolveSwap(null);
+    expect(store.state.swapQueue).toEqual([]);
+    expect(store.state.run?.pendingChoices).toEqual(offers);
   });
 });
 
