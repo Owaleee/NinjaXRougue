@@ -77,4 +77,5 @@ export const BALANCE = {
   loadout: { geninSlots: 4 },
   shop: { equipmentOffers: 2, rareScrollsPerStock: 1, rareScrollMaxPerRun: 5, rewardRyo: 60, trainingUses: 4 },
   history: { maxEntries: 50 },
+  ai: { defensiveHpPct: 0.25, phase2HpPct: 0.5 },
 };
