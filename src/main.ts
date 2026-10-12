@@ -4,6 +4,7 @@ import { t } from './i18n/pt-BR';
 import { GameStore } from './store/GameStore';
 import { App } from './ui-dom/App';
 import { KEYS, OVERLAY, SCREENS } from './ui-dom/screens';
+import { createGame } from './scenes/createGame';
 
 /**
  * Único lugar que toca no navegador "de verdade": localStorage, relógio e
@@ -39,5 +40,14 @@ const { storage, ok } = pickStorage();
 const store = new GameStore({ storage, now: () => Date.now(), newSeed });
 const app = new App(root, store, { screens: SCREENS, keys: KEYS, overlay: OVERLAY });
 app.mount();
+let canvasOk = true;
+try {
+  app.setBattleView(createGame(app.gameLayer, store));
+} catch {
+  // Sem WebGL/canvas o jogo continua jogável: sem animador registrado, nada trava.
+  canvasOk = false;
+}
 store.boot();
+// Avisos só depois do boot: o boot substitui a lista de avisos.
+if (!canvasOk) store.notify('error', t('notice.noCanvas'));
 if (!ok) store.notify('error', t('notice.storageUnavailable'));

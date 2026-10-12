@@ -12,6 +12,7 @@ import { RunEndScreen } from './RunEndScreen';
 import { EncyclopediaScreen } from './EncyclopediaScreen';
 import { HistoryScreen } from './HistoryScreen';
 import { TitlesScreen } from './TitlesScreen';
+import { BattleScreen, battleKeys } from './BattleScreen';
 
 /** Registro de telas. Cada task de tela acrescenta a sua aqui. */
 export const SCREENS: Partial<Record<ScreenId, ScreenRenderer>> = {
@@ -26,8 +27,9 @@ export const SCREENS: Partial<Record<ScreenId, ScreenRenderer>> = {
   encyclopedia: EncyclopediaScreen,
   history: HistoryScreen,
   titles: TitlesScreen,
+  battle: BattleScreen,
 };
 
-export const KEYS: Partial<Record<ScreenId, KeyHandler>> = {};
+export const KEYS: Partial<Record<ScreenId, KeyHandler>> = { battle: battleKeys };
 
 export const OVERLAY: ((ctx: ScreenCtx) => HTMLElement | null) | null = swapOverlay;
