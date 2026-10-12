@@ -42,6 +42,7 @@ export const BALANCE = {
     critMultiplier: 1.5,
     varianceMin: 0.9,
     varianceMax: 1.1,
+    minDamage: 1,
     elementAdvantage: 1.3,
     elementDisadvantage: 0.8,
   },
