@@ -1,6 +1,8 @@
-# NinjaXRogue — MVP (Saga da Onda)
+# NarutoTxGame — MVP (Saga da Onda)
 
 Roguelite de ninjas por turnos, para um jogador e 100% local no navegador. Este MVP cobre a Saga da Onda (Zabuza e Haku), com três caminhos de clã (Uchiha, Uzumaki e Sem clã), loja, maestria de jutsus, títulos, Enciclopédia de Jutsus e Histórico de Runs.
+
+O package npm se chama `ninja-x-rogue`.
 
 Projeto de fã, sem fins comerciais. Não usa arte oficial: personagens e cenário são placeholders (formas e nomes).
 
@@ -18,6 +20,8 @@ npm test            # testes (motor e interface)
 npm run sim         # simulador de balanceamento: imprime a tabela de builds
 npm run sim:check   # falha se alguma meta de balanceamento estiver fora da faixa
 ```
+
+Atenção: hoje `npm run sim:check` sai com falha, porque 8 metas de balanceamento ainda estão fora da faixa (ver `docs/balance-log.md`).
 
 Use uma janela com 1024 px de largura ou mais (o layout é só desktop).
 

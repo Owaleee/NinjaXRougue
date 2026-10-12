@@ -57,11 +57,11 @@ export function strong(run: RunState): void {
 }
 
 /** Cria a run, aplica o patch no save e devolve um store "recarregado" já no mapa. */
-export function scenario(patch?: (run: RunState) => void): { store: GameStore; storage: MemoryStore } {
+export function scenario(patch?: (run: RunState) => void, params: CreateParams = PARAMS): { store: GameStore; storage: MemoryStore } {
   const storage = new MemoryStore();
   const a = makeStore(storage);
   a.boot();
-  a.startNewRun(PARAMS);
+  a.startNewRun(params);
   if (patch) patchRun(storage, patch);
   const store = makeStore(storage);
   store.boot();

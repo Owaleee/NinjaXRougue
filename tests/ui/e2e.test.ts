@@ -4,7 +4,7 @@ import { presetAllocation, type PresetId } from '../../src/game/progression/pres
 import { botAction } from '../../src/game/sim/bot';
 import type { GameStore } from '../../src/store/GameStore';
 import { click, mount } from './appHelpers';
-import { makeStore, scenario, strong } from './memoryStore';
+import { makeStore, PARAMS, scenario, strong } from './memoryStore';
 
 /**
  * Joga uma run inteira pelos MESMOS comandos que a interface usa,
@@ -26,7 +26,6 @@ function autoplay(store: GameStore, preset: PresetId): void {
         store.rest();
         break;
       case 'battle':
-        if (s.locked) store.animationsDone();
         {
           const a = botAction(run.battle!, jd);
           jd = a.type === 'defend';
@@ -60,14 +59,14 @@ function autoplay(store: GameStore, preset: PresetId): void {
   }
 }
 
-const CASES: [string, string, PresetId][] = [
-  ['Uchiha', 'fogo', 'ninjutsu'],
-  ['Uzumaki', 'vento', 'ninjutsu'],
-  ['Sem clã', 'terra', 'taijutsu'],
+const CASES: [string, string, string, boolean, PresetId][] = [
+  ['Uchiha', 'uchiha', 'fogo', true, 'ninjutsu'],
+  ['Uzumaki', 'uzumaki', 'vento', false, 'ninjutsu'],
+  ['Sem clã', 'semcla', 'terra', false, 'taijutsu'],
 ];
 
 describe('run completa pela interface (spec §13: critério de pronto)', () => {
-  it.each(CASES)('%s: criação pela tela, run até o fim, Histórico gravado', (clanLabel, affinity, preset) => {
+  it.each(CASES)('%s: criação pela tela, run até o fim, Histórico gravado', (clanLabel, clanId, affinity, fixedAffinity, preset) => {
     const store = makeStore();
     const root = mount(store);
     store.boot();
@@ -77,13 +76,16 @@ describe('run completa pela interface (spec §13: critério de pronto)', () => {
     name.dispatchEvent(new Event('input'));
     click(root, clanLabel);
     const aff = root.querySelector('select[name=affinity]') as HTMLSelectElement;
-    if (!aff.disabled) {
+    expect(aff.disabled).toBe(fixedAffinity);
+    if (!fixedAffinity) {
       aff.value = affinity;
       aff.dispatchEvent(new Event('change'));
     }
     (root.querySelector(`[data-preset=${preset}]`) as HTMLButtonElement).click();
     click(root, 'Começar a Saga da Onda');
     expect(store.state.screen).toBe('map');
+    expect(store.state.run!.character.clan).toBe(clanId);
+    expect(store.state.run!.character.affinity).toBe(affinity);
 
     autoplay(store, preset);
 
@@ -97,8 +99,12 @@ describe('run completa pela interface (spec §13: critério de pronto)', () => {
     expect(store.state.screen).toBe('menu');
   }, 120_000);
 
-  it('build forte conclui a saga e registra a vitória', () => {
-    const { store } = scenario(strong);
+  it.each([
+    { clan: 'uchiha', affinity: 'fogo' },
+    { clan: 'uzumaki', affinity: 'vento' },
+    { clan: 'semcla', affinity: 'terra' },
+  ] as const)('build forte ($clan) conclui a saga e registra a vitória', ({ clan, affinity }) => {
+    const { store } = scenario(strong, { ...PARAMS, clan, affinity });
     mount(store);
     autoplay(store, 'ninjutsu');
     expect(store.state.runEnd?.result).toBe('victory');
