@@ -91,3 +91,72 @@ describe('salvamento', () => {
     expect(store.getItem(RUN_KEY)).toBeNull();
   });
 });
+
+class FaultyStore extends MemoryStore {
+  failGet = false;
+  failSet = false;
+  override getItem(k: string) {
+    if (this.failGet) throw new Error('acesso negado');
+    return super.getItem(k);
+  }
+  override setItem(k: string, v: string) {
+    if (this.failSet) throw new Error('cota estourada');
+    super.setItem(k, v);
+  }
+}
+
+describe('leitura nunca lança (falhas de armazenamento)', () => {
+  it('getItem lança: loadRun e loadMeta devolvem estado limpo com erro', () => {
+    const store = new FaultyStore();
+    store.failGet = true;
+    const r = loadRun(store, 0);
+    expect(r.value).toBeNull();
+    expect(r.error).not.toBeNull();
+    const m = loadMeta(store, 0);
+    expect(m.value).toEqual(emptyMeta());
+    expect(m.error).not.toBeNull();
+  });
+
+  it('save corrompido e setItem lança: não lança, devolve null com erro e remove a chave original', () => {
+    const store = new FaultyStore();
+    store.setItem(RUN_KEY, '{oops');
+    store.failSet = true;
+    let r: ReturnType<typeof loadRun> | undefined;
+    expect(() => {
+      r = loadRun(store, 777);
+    }).not.toThrow();
+    expect(r!.value).toBeNull();
+    expect(r!.error).toMatch(/inválido/);
+    expect(r!.error).toMatch(/Não foi possível guardar a cópia/);
+    store.failSet = false;
+    expect(store.getItem(RUN_KEY)).toBeNull();
+  });
+
+  it('saveRun lança quando a escrita falha', () => {
+    const store = new FaultyStore();
+    store.failSet = true;
+    expect(() => saveRun(store, newRun(params, 1, 0))).toThrow();
+  });
+});
+
+describe('validação extra da run', () => {
+  it('rejeita nodeIndex fora dos nós', () => {
+    const store = new MemoryStore();
+    const base = newRun(params, 1, 0);
+    store.setItem(RUN_KEY, JSON.stringify({ ...base, nodeIndex: base.nodes.length }));
+    const r = loadRun(store, 42);
+    expect(r.value).toBeNull();
+    expect(r.error).toMatch(/inválido/);
+    expect(store.getItem(RUN_KEY)).toBeNull();
+    expect(store.getItem('nxr.run.corrupt.42')).not.toBeNull();
+  });
+
+  it('rejeita fase de batalha sem início de encontro', () => {
+    const store = new MemoryStore();
+    store.setItem(RUN_KEY, JSON.stringify({ ...newRun(params, 1, 0), phase: 'battle', encounterStart: null }));
+    const r = loadRun(store, 43);
+    expect(r.value).toBeNull();
+    expect(r.error).toMatch(/inválido/);
+    expect(store.getItem(RUN_KEY)).toBeNull();
+  });
+});
