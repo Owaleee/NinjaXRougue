@@ -71,11 +71,13 @@ export const BALANCE = {
     maxLevelOffAffinity: 3,
   },
   cost: { offAffinityMult: 1.25 },
-  xp: { toNextBase: 24, toNextPerLevel: 12, commonBase: 8, commonPerLevel: 4, eliteMult: 1.6, bossMult: bossXpMult },
+  xp: { toNextBase: 24, toNextPerLevel: 12, commonBase: 8, commonPerLevel: 4, eliteMult: 1.6, bossMult: bossXpMult, bossMultDefault: 4 },
   enemyGrades,
   rewards,
   loadout: { geninSlots: 4 },
   shop: { equipmentOffers: 2, rareScrollsPerStock: 1, rareScrollMaxPerRun: 5, rewardRyo: 60, trainingUses: 4 },
   history: { maxEntries: 50 },
+  /** Bifurcações "Comum ou Elite" sorteadas por run (spec §7, ASSUMIDO). */
+  run: { eliteForks: 3 },
   ai: { defensiveHpPct: 0.25, phase2HpPct: 0.5 },
 };
