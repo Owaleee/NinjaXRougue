@@ -11,6 +11,7 @@ import { ITEMS } from '../../data/items';
 import { JUTSUS } from '../../data/jutsus';
 import { num, t, type I18nKey } from '../../i18n/pt-BR';
 import type { GameStore } from '../../store/GameStore';
+import { tabBar } from '../components/tabBar';
 import { allocationPanel } from '../components/allocation';
 import { runHeader } from '../components/runHeader';
 import { bar, button, h } from '../dom';
@@ -31,16 +32,10 @@ export const PrepScreen: ScreenRenderer = (ctx) => {
   const run = store.state.run;
   if (!run) return h('div', { class: 'panel' }, t('notice.noRun'));
   const ui = ctx.local('ui', () => ({ tab: 'loja' as PrepTab, draft: emptyAttributes(0) }));
-  const tabs = h(
-    'div',
-    { class: 'tabs', attrs: { role: 'tablist' } },
-    ...TABS.map((tab) =>
-      button(t(tab.label), () => {
-        ui.tab = tab.id;
-        ctx.rerender();
-      }, { class: ui.tab === tab.id ? 'active' : '', attrs: { 'data-tab': tab.id, role: 'tab', 'aria-selected': String(ui.tab === tab.id) } }),
-    ),
-  );
+  const tabs = tabBar(TABS.map((x) => ({ id: x.id, label: t(x.label) })), ui.tab, (id) => {
+    ui.tab = id;
+    ctx.rerender();
+  });
   const body =
     ui.tab === 'loja' ? shopTab(store, run) : ui.tab === 'jutsus' ? jutsuTab(store, run) : ui.tab === 'equip' ? equipTab(store, run) : attrsTab(ctx, run, ui);
   return h('div', { class: 'screen' }, runHeader(run), h('h1', {}, t('prep.heading')), tabs, body, h('div', { class: 'row' }, button(t('common.back'), () => store.back())));
@@ -99,7 +94,7 @@ function jutsuTab(store: GameStore, run: RunState): HTMLElement {
       j.element ? h('span', { class: 'badge' }, t(`element.${j.element}`)) : null,
       ' ',
       h('span', { class: 'muted' }, t('prep.cost', { n: costFor(comb, j) })),
-      ' · ',
+      t('format.dot'),
       h('span', {}, t('prep.mastery', { n: p.level })),
       p.usesForNext !== null ? bar('xp', p.usesIntoLevel, p.usesForNext, t('prep.masteryNext')) : h('span', { class: 'badge' }, t('prep.masteryMax')),
       h('p', { class: 'muted' }, j.description),

@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest';
+import type { RunState } from '../../src/game/run/types';
 import { emptyAttributes } from '../../src/game/attributes';
 import { radarPoints, radarSvg } from '../../src/ui-dom/components/radar';
 import { bonusText, compareText } from '../../src/ui-dom/view/format';
@@ -137,6 +138,48 @@ describe('Ficha — base vs efetivo e motivos', () => {
     const { root } = prep(undefined, 'jutsus');
     expect(q(root, '[data-tab=jutsus]').getAttribute('aria-selected')).toBe('true');
     expect(q(root, '[data-tab=loja]').getAttribute('aria-selected')).toBe('false');
+    expect(q(root, '[data-tab=jutsus]').textContent).toBe('✓ Jutsus');
+    for (const id of ['loja', 'equip', 'attrs']) expect(q(root, `[data-tab=${id}]`).textContent).not.toContain('✓');
+  });
+});
+
+describe('Ficha — nome do jogador é texto', () => {
+  it('nome com HTML aparece literal e não cria elemento', () => {
+    const { store } = scenario((run) => {
+      run.character.name = '<img onerror=1><b>x</b>';
+    });
+    const root = mount(store);
+    store.go('sheet');
+    expect(root.textContent).toContain('<img onerror=1><b>x</b>');
+    expect(root.querySelector('.panel img')).toBeNull();
+    expect(root.querySelector('table b')).toBeNull();
+  });
+});
+
+describe('Fila de troca com recompensas pendentes', () => {
+  it('resolver a fila não mexe em pendingChoices', () => {
+    const choices: RunState['pendingChoices'] = [['treino', 'kit', 'ryo'], ['ryo', 'kit', 'treino'], ['kit', 'ryo', 'treino']];
+    const { store } = scenario((run) => {
+      run.phase = 'result';
+      run.pendingChoices = choices;
+      run.lastResult = {
+        nodeIndex: 0, enemyId: 'bandido', enemyName: 'Bandido', grade: 'D', isBoss: false, elite: false, won: true,
+        xp: 10, ryo: 5, rep: 1, levelsGained: 0, learned: [], damageTaken: 0, rounds: 3, hpPctEnd: 1,
+      };
+      run.character.unspentPoints = 40;
+    });
+    const root = mount(store);
+    store.allocate({ gen: 20, tai: 10, vel: 10 });
+    let queue = store.state.swapQueue.length;
+    expect(queue).toBeGreaterThanOrEqual(2);
+    while (queue > 0) {
+      const first = store.state.swapQueue[0];
+      click(root, 'Manter no repertório');
+      expect(store.state.swapQueue).toHaveLength(queue - 1);
+      expect(store.state.swapQueue).not.toContain(first);
+      expect(store.state.run?.pendingChoices).toEqual(choices);
+      queue -= 1;
+    }
   });
 });
 

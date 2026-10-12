@@ -14,6 +14,7 @@ import { JUTSUS } from '../../data/jutsus';
 import { STORY_NAMES } from '../../data/story';
 import { TITLES } from '../../data/titles';
 import { num, pct, t, type I18nKey } from '../../i18n/pt-BR';
+import { tabBar } from '../components/tabBar';
 import { radarSvg } from '../components/radar';
 import { bar, button, h } from '../dom';
 import type { ScreenRenderer } from '../types';
@@ -39,16 +40,10 @@ export const SheetScreen: ScreenRenderer = (ctx) => {
   const run = store.state.run;
   if (!run) return h('div', { class: 'panel' }, t('notice.noRun'));
   const ui = ctx.local('ui', () => ({ tab: 'perfil' as SheetTab }));
-  const tabs = h(
-    'div',
-    { class: 'tabs', attrs: { role: 'tablist' } },
-    ...TABS.map((tab) =>
-      button(t(tab.label), () => {
-        ui.tab = tab.id;
-        ctx.rerender();
-      }, { class: ui.tab === tab.id ? 'active' : '', attrs: { 'data-tab': tab.id, role: 'tab', 'aria-selected': String(ui.tab === tab.id) } }),
-    ),
-  );
+  const tabs = tabBar(TABS.map((x) => ({ id: x.id, label: t(x.label) })), ui.tab, (id) => {
+    ui.tab = id;
+    ctx.rerender();
+  });
   const body = ui.tab === 'perfil' ? profile(run) : ui.tab === 'atributos' ? attributes(run) : ui.tab === 'jutsus' ? jutsus(run) : equipment(run);
   return h('div', { class: 'screen' }, h('h1', {}, t('sheet.heading')), tabs, body, h('div', { class: 'row' }, button(t('common.back'), () => store.back())));
 };

@@ -240,6 +240,8 @@ export const PT_BR = {
   'prep.reasonRareMax': 'Limite de Pergaminhos Raros da run atingido.',
   'prep.current': 'equipado',
   'format.none': '—',
+  'format.dot': ' · ',
+  'tabs.activeMark': '✓',
   'format.join': ', ',
   'radar.label': 'Radar de atributos: contorno tracejado é o atributo base, área preenchida é o efetivo',
   'sheet.rep': 'Reputação',
