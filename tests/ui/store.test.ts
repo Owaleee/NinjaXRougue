@@ -191,7 +191,6 @@ describe('GameStore — fim de run com falha de armazenamento', () => {
 
   it('run morta no save com meta que já a registrou: boot não duplica', () => {
     const storage = new MemoryStore();
-    makeStore(storage).boot();
     const a = makeStore(storage);
     a.boot();
     a.startNewRun(PARAMS);
