@@ -29,7 +29,7 @@ export const RunEndScreen: ScreenRenderer = (ctx) => {
       row(t('runEnd.biggestHit'), num(s.biggestHit)),
       row(t('runEnd.crits'), String(s.crits)),
       row(t('runEnd.turns'), String(s.turns)),
-      row(t('runEnd.mostUsed'), most ? (JUTSUS[most]?.name ?? most) : '—'),
+      row(t('runEnd.mostUsed'), most ? (JUTSUS[most]?.name ?? most) : t('runEnd.none')),
     ),
     info.newTitles.length
       ? h('div', {}, h('h3', {}, t('runEnd.newTitles')), h('ul', {}, ...info.newTitles.map((id) => h('li', {}, TITLES[id]?.name ?? id))))

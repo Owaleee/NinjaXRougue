@@ -130,6 +130,7 @@ export const PT_BR = {
   'result.pointsLeft': 'Pontos não distribuídos ficam guardados para depois.',
   'result.goals': 'Próximos jutsus',
   'result.goal': 'Faltam {missing} para {jutsu}',
+  'result.goalJoin': ' e ',
   'result.goalPart': '{n} de {attr}',
   'result.choiceTitle': 'Escolha uma recompensa ({n} pendente(s))',
   'result.trainPick': 'Treinar qual jutsu?',
@@ -156,6 +157,7 @@ export const PT_BR = {
   'runEnd.turns': 'Turnos',
   'runEnd.mostUsed': 'Jutsu mais usado',
   'runEnd.newTitles': 'Títulos conquistados',
+  'runEnd.none': '—',
   'runEnd.menu': 'Voltar ao menu',
 } as const;
 

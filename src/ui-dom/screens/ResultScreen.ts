@@ -69,7 +69,7 @@ export const ResultScreen: ScreenRenderer = (ctx) => {
               {},
               t('result.goal', {
                 jutsu: JUTSUS[g.jutsuId]?.name ?? g.jutsuId,
-                missing: g.missing.map((m) => t('result.goalPart', { n: m.missing, attr: ATTR_NAMES[m.attr] })).join(' e '),
+                missing: g.missing.map((m) => t('result.goalPart', { n: m.missing, attr: ATTR_NAMES[m.attr] })).join(t('result.goalJoin')),
               }),
             ),
           ),
@@ -78,7 +78,7 @@ export const ResultScreen: ScreenRenderer = (ctx) => {
     : null;
 
   const offer = run.pendingChoices[0];
-  if (!offer) ui.training = false;
+  const training = ui.training && !!offer?.includes('treino');
   const choice = offer
     ? h(
         'div',
@@ -88,26 +88,28 @@ export const ResultScreen: ScreenRenderer = (ctx) => {
           'div',
           { class: 'row' },
           ...offer.map((o) => {
-            const selected = o === 'treino' && ui.training;
+            const isTrain = o === 'treino';
             return h(
               'div',
               { class: 'card' },
               button(
-                `${selected ? '✓ ' : ''}${t(REWARD_TEXT[o].name)}`,
+                `${isTrain && training ? '✓ ' : ''}${t(REWARD_TEXT[o].name)}`,
                 () => {
-                  if (o === 'treino') {
-                    ui.training = true;
+                  if (isTrain) {
+                    ui.training = !training;
                     return ctx.rerender();
                   }
+                  ui.training = false;
                   store.chooseReward(o);
                 },
-                { attrs: { 'data-reward': o, 'aria-pressed': String(selected) } },
+                // Só o Treino é um toggle; os outros cartões resolvem na hora.
+                { attrs: isTrain ? { 'data-reward': o, 'aria-pressed': String(training) } : { 'data-reward': o } },
               ),
               h('p', { class: 'muted' }, t(REWARD_TEXT[o].desc, { n: o === 'ryo' ? BALANCE.shop.rewardRyo : BALANCE.shop.trainingUses })),
             );
           }),
         ),
-        ui.training
+        training
           ? h(
               'div',
               { class: 'row' },

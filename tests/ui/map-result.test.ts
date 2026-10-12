@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest';
 import { characterMaxHp } from '../../src/game/progression/character';
+import type { RunState } from '../../src/game/run/types';
 import { click, findButton, mount } from './appHelpers';
 import { playBattle, scenario, strong } from './memoryStore';
 
@@ -85,12 +86,7 @@ describe('Resultado', () => {
       const option = store.state.run!.pendingChoices[0]![0]!;
       const card = root.querySelector(`[data-reward=${option}]`) as HTMLButtonElement;
       card.click();
-      if (option === 'treino') {
-        const pressed = root.querySelector('[data-reward=treino]') as HTMLButtonElement;
-        expect(pressed.getAttribute('aria-pressed')).toBe('true');
-        expect(pressed.textContent).toContain('✓');
-        (root.querySelector('[data-train]') as HTMLButtonElement).click();
-      }
+      if (option === 'treino') (root.querySelector('[data-train]') as HTMLButtonElement).click();
     }
     expect(store.state.run?.pendingChoices).toHaveLength(0);
     click(root, 'Continuar');
@@ -104,6 +100,84 @@ describe('Resultado', () => {
     (root.querySelector('[data-preset=ninjutsu]') as HTMLButtonElement).click();
     click(root, 'Confirmar distribuição');
     expect(store.state.run?.character.unspentPoints).toBe(0);
+  });
+});
+
+function resultScenario(choices: RunState['pendingChoices'], extra?: (run: RunState) => void) {
+  const s = scenario((run) => {
+    run.phase = 'result';
+    run.pendingChoices = choices;
+    run.lastResult = {
+      nodeIndex: 0, enemyId: 'bandido', enemyName: 'Bandido', grade: 'D', isBoss: false, elite: false, won: true,
+      xp: 10, ryo: 5, rep: 1, levelsGained: 0, learned: [], damageTaken: 0, rounds: 3, hpPctEnd: 1,
+    };
+    extra?.(run);
+  });
+  return { ...s, root: mount(s.store) };
+}
+
+describe('Resultado: Treino, metas e título', () => {
+  const pick = (root: HTMLElement) => root.querySelector('[data-reward=treino]') as HTMLButtonElement;
+
+  it('Treino é toggle com aria-pressed e marcador; data-train aplica o treino', () => {
+    const { root, store } = resultScenario([['treino', 'kit', 'ryo']]);
+    expect(pick(root).getAttribute('aria-pressed')).toBe('false');
+    expect(root.textContent).not.toContain('Treinar qual jutsu?');
+    pick(root).click();
+    expect(pick(root).getAttribute('aria-pressed')).toBe('true');
+    expect(pick(root).textContent).toContain('✓');
+    expect(root.textContent).toContain('Treinar qual jutsu?');
+    const target = store.state.run!.character.equipped[0]!;
+    const before = store.state.run!.character.masteryUses[target] ?? 0;
+    (root.querySelector(`[data-train=${target}]`) as HTMLButtonElement).click();
+    expect(store.state.run!.character.masteryUses[target]).toBe(before + 4);
+    expect(store.state.run!.pendingChoices).toHaveLength(0);
+  });
+
+  it('cartões que resolvem na hora não levam aria-pressed', () => {
+    const { root } = resultScenario([['treino', 'kit', 'ryo']]);
+    expect(root.querySelector('[data-reward=kit]')!.hasAttribute('aria-pressed')).toBe(false);
+  });
+
+  it('Treino seguido de Kit não vaza a seleção para a próxima oferta', () => {
+    const { root, store } = resultScenario([['treino', 'kit', 'ryo'], ['treino', 'kit', 'pilula']]);
+    pick(root).click();
+    (root.querySelector('[data-reward=kit]') as HTMLButtonElement).click();
+    expect(store.state.run!.pendingChoices).toHaveLength(1);
+    expect(pick(root).getAttribute('aria-pressed')).toBe('false');
+    expect(root.textContent).not.toContain('Treinar qual jutsu?');
+  });
+
+  it('metas "Faltam X para Y" usam o atributo BASE: pontos não gastos não mudam a meta', () => {
+    const goalText = (root: HTMLElement) =>
+      Array.from(root.querySelectorAll('li')).filter((li) => li.textContent?.startsWith('Faltam')).map((li) => li.textContent);
+    const a = resultScenario([]);
+    const goalsA = goalText(a.root);
+    expect(goalsA.length).toBeGreaterThan(0);
+    const b = resultScenario([], (run) => {
+      run.character.unspentPoints = 30;
+    });
+    expect(goalText(b.root)).toEqual(goalsA);
+  });
+});
+
+describe('Fim de run: vitória com título novo', () => {
+  it('mostra o nome do título conquistado', () => {
+    const { store } = scenario((run) => {
+      strong(run);
+      run.nodeIndex = run.nodes.length - 1;
+      run.phase = 'map';
+      run.stats.bossesDefeated = ['zabuza'];
+    });
+    const root = mount(store);
+    store.fight();
+    playBattle(store);
+    expect(store.state.run?.phase).toBe('victory');
+    expect(store.state.screen).toBe('runEnd');
+    expect(store.state.runEnd?.newTitles.length).toBeGreaterThan(0);
+    expect(root.textContent).toContain('Saga da Onda concluída!');
+    expect(root.textContent).toContain('Títulos conquistados');
+    expect(root.textContent).toContain('Demônio da Névoa');
   });
 });
 
