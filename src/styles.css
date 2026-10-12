@@ -1,0 +1,90 @@
+/* Tokens de cor e tamanho. Toda cor da interface sai daqui. */
+:root {
+  --bg: #12141a;
+  --panel: #1c1f28;
+  --panel-2: #262a36;
+  --line: #3a3f4f;
+  --text: #e8e6e1;
+  --muted: #9a9caa;
+  --accent: #f08a24;
+  --accent-2: #3fa7d6;
+  --good: #4caf6a;
+  --bad: #e0524a;
+  --heal: #59c98a;
+  --effect: #b98ce8;
+  --hp: #d6453d;
+  --chakra: #3a7bd5;
+  --radius: 8px;
+  --gap: 12px;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 1024px; background: var(--bg); }
+h1, h2, h3 { margin: 0 0 var(--gap); }
+button {
+  font: inherit; color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 8px 14px; cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button.primary { background: var(--accent); color: #1a1205; border-color: var(--accent); font-weight: 600; }
+input, select { font: inherit; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 10px; }
+
+/* Camadas: canvas do Phaser por baixo, telas DOM por cima. */
+#app { position: relative; min-height: 100vh; }
+#game-layer { position: absolute; inset: 0; display: none; }
+#game-layer.visible { display: block; }
+#ui-layer { position: relative; z-index: 1; padding: 24px; max-width: 1280px; margin: 0 auto; }
+#ui-layer.battle { padding: 0; max-width: none; pointer-events: none; }
+#ui-layer.battle > * { pointer-events: auto; }
+#toast-layer { position: fixed; top: 16px; right: 16px; z-index: 30; display: flex; flex-direction: column; gap: 8px; max-width: 420px; }
+#modal-layer:empty, #overlay-layer:empty { display: none; }
+#modal-layer, #overlay-layer { position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; }
+
+.screen { display: flex; flex-direction: column; gap: var(--gap); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+.row { display: flex; gap: var(--gap); align-items: center; flex-wrap: wrap; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+.muted { color: var(--muted); }
+.tabs { display: flex; gap: 4px; }
+.tabs button.active { border-color: var(--accent); color: var(--accent); }
+.toast { background: var(--panel-2); border-left: 4px solid var(--accent-2); padding: 10px 12px; border-radius: var(--radius); display: flex; gap: 8px; align-items: start; }
+.toast.error { border-left-color: var(--bad); }
+.dialog { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; min-width: 420px; max-width: 640px; }
+.bar { height: 10px; background: var(--panel-2); border-radius: 5px; overflow: hidden; }
+.bar > span { display: block; height: 100%; transition: width 300ms ease; }
+.bar.hp > span { background: var(--hp); }
+.bar.chakra > span { background: var(--chakra); }
+.bar.xp > span { background: var(--accent); }
+.card { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; }
+.card.selected { border-color: var(--accent); }
+table { border-collapse: collapse; width: 100%; }
+td, th { padding: 4px 8px; text-align: left; border-bottom: 1px solid var(--line); }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); font-size: 0.85em; }
+.node-list { display: grid; grid-template-columns: repeat(13, 1fr); gap: 6px; }
+.node { text-align: center; padding: 6px 2px; border-radius: var(--radius); border: 1px solid var(--line); font-size: 0.8em; }
+.node.done { opacity: 0.5; }
+.node.current { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.node.boss { border-style: double; border-width: 3px; }
+
+/* Batalha */
+.battle-hud { position: relative; min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; gap: var(--gap); padding: 16px; }
+.fighters { display: grid; grid-template-columns: 340px 1fr 340px; gap: var(--gap); }
+.fighter { background: rgba(28, 31, 40, 0.92); }
+.effects { display: flex; gap: 4px; flex-wrap: wrap; min-height: 24px; }
+.effect-chip { font-size: 0.8em; padding: 1px 6px; border-radius: 4px; background: var(--panel-2); border: 1px solid var(--effect); }
+.turn-indicator { text-align: center; font-weight: 600; }
+.battle-log { background: rgba(18, 20, 26, 0.92); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; height: 220px; overflow-y: auto; font-size: 0.9em; align-self: end; }
+.log-player { color: #8fd0ff; }
+.log-enemy { color: #ffb08a; }
+.log-damage { color: var(--bad); }
+.log-heal { color: var(--heal); }
+.log-effect { color: var(--effect); }
+.log-system { color: var(--muted); }
+.action-bar { display: flex; gap: 8px; flex-wrap: wrap; background: rgba(28, 31, 40, 0.95); padding: 12px; border-radius: var(--radius); border: 1px solid var(--line); }
+.action-bar .jutsu { min-width: 150px; text-align: left; }
+.key { font-size: 0.75em; color: var(--muted); margin-right: 4px; }
