@@ -69,7 +69,9 @@ const RunShape = z
   })
   .passthrough()
   .superRefine((r, ctx) => {
-    if (r.nodeIndex >= r.nodes.length) {
+    // Na vitória o índice fica em nodes.length (todos os nós concluídos); nas demais fases precisa ser um nó real.
+    const limit = r.phase === 'victory' ? r.nodes.length : r.nodes.length - 1;
+    if (r.nodeIndex > limit) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: `nodeIndex ${r.nodeIndex} fora dos ${r.nodes.length} nós` });
     }
     if (r.phase === 'battle' && !r.encounterStart) {
@@ -83,7 +85,16 @@ const MetaShape = z
     learnedEver: z.array(z.string()),
     masteredEver: z.array(z.string()),
     titlesUnlocked: z.array(z.string()),
-    lifetime: z.object({}).passthrough(),
+    lifetime: z
+      .object({
+        runs: z.number(),
+        victories: z.number(),
+        defeatedByGrade: z.record(z.string(), z.number()),
+        bossesDefeated: z.record(z.string(), z.number()),
+      })
+      .passthrough(),
+    // Opcional: metas antigas não tinham o campo; o load normaliza para null (sem bump de versão).
+    lastRecordedRunId: z.string().nullable().optional(),
     history: z.array(z.unknown()),
   })
   .passthrough();
@@ -174,6 +185,7 @@ export function loadRun(store: KeyValueStore, now: number): LoadResult<RunState>
   }
 }
 
+/** Apaga a run salva. Lança em falha de escrita; o chamador captura (como `saveRun`). */
 export function deleteRun(store: KeyValueStore): void {
   store.removeItem(RUN_KEY);
 }
@@ -198,7 +210,9 @@ export function loadMeta(store: KeyValueStore, now: number): LoadResult<MetaStat
   try {
     const data = migrate(parseObject(raw), META_MIGRATIONS, META_VERSION);
     MetaShape.parse(data);
-    return { value: data as unknown as MetaState, error: null };
+    const meta = data as unknown as MetaState;
+    meta.lastRecordedRunId ??= null;
+    return { value: meta, error: null };
   } catch (e) {
     const kept = quarantine(store, `nxr.meta.corrupt.${now}`, META_KEY, raw);
     const note = kept ? 'Uma cópia foi guardada e o progresso recomeçou.' : 'Não foi possível guardar a cópia; o progresso recomeçou.';

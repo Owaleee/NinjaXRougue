@@ -8,13 +8,30 @@ const params: CreateParams = { name: 'Teste', clan: 'uchiha', affinity: 'fogo', 
 const run = (): RunState => newRun(params, 1, 0);
 
 describe('meta-progressão', () => {
+  it('recordRunEnd é idempotente para a mesma run', () => {
+    const r = run();
+    r.phase = 'dead';
+    const first = recordRunEnd(emptyMeta(), r, 'dead', 1000);
+    const second = recordRunEnd(first.meta, r, 'dead', 2000);
+    expect(second.meta.lifetime.runs).toBe(1);
+    expect(second.meta.history).toHaveLength(1);
+    expect(second.newTitles).toEqual([]);
+  });
+
+  it('idempotência vale mesmo se o histórico já cortou a entrada', () => {
+    const r = run();
+    const first = recordRunEnd(emptyMeta(), r, 'dead', 1000);
+    const meta = { ...first.meta, history: [] };
+    expect(recordRunEnd(meta, r, 'dead', 2000).meta.lifetime.runs).toBe(1);
+  });
+
   it('registra o histórico com texto e snapshot, mais recente primeiro, no máximo 50', () => {
     const r = run();
     r.phase = 'dead';
     r.character.level = 4;
     r.lastResult = { nodeIndex: 9, enemyId: 'mercenario_nevoa', enemyName: 'Mercenário da Névoa', grade: 'D', isBoss: false, elite: false, won: false, xp: 0, ryo: 0, rep: 0, levelsGained: 0, learned: [], damageTaken: 50, rounds: 3, hpPctEnd: 0 };
     let meta = emptyMeta();
-    for (let i = 0; i < 52; i++) meta = recordRunEnd(meta, r, 'dead', 1000 + i).meta;
+    for (let i = 0; i < 52; i++) meta = recordRunEnd(meta, { ...r, startedAt: 1000 + i }, 'dead', 1000 + i).meta;
     expect(meta.history).toHaveLength(50);
     expect(meta.history[0]!.date).toBe(1051);
     expect(meta.history[0]!.text).toBe('Morreu na Saga da Onda, nível 4, para Mercenário da Névoa');
@@ -37,7 +54,7 @@ describe('meta-progressão', () => {
     const r1 = recordRunEnd(emptyMeta(), a, 'dead', 1);
     expect(r1.newTitles).toContain('demonio_da_nevoa');
     expect(r1.newTitles).not.toContain('cacador_de_bandidos');
-    const r2 = recordRunEnd(r1.meta, a, 'dead', 2);
+    const r2 = recordRunEnd(r1.meta, { ...a, startedAt: 2 }, 'dead', 2);
     expect(r2.newTitles).toContain('cacador_de_bandidos');
     expect(r2.newTitles).not.toContain('demonio_da_nevoa'); // já tinha
   });

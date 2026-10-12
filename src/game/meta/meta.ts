@@ -47,6 +47,8 @@ export interface MetaState {
   titlesUnlocked: string[];
   lifetime: LifetimeStats;
   history: HistoryEntry[];
+  /** Última run registrada; garante idempotência mesmo depois do histórico ser cortado em 50. */
+  lastRecordedRunId: string | null;
 }
 
 export function emptyMeta(): MetaState {
@@ -57,6 +59,7 @@ export function emptyMeta(): MetaState {
     titlesUnlocked: [],
     lifetime: { runs: 0, victories: 0, defeatedByGrade: {}, bossesDefeated: {} },
     history: [],
+    lastRecordedRunId: null,
   };
 }
 
@@ -100,13 +103,21 @@ export function isTitleEarned(t: TitleDef, meta: MetaState, run: RunState): bool
   }
 }
 
+/**
+ * Registra o fim de uma run na meta. Finalizar = recordRunEnd → saveMeta → deleteRun;
+ * chamar de novo com a mesma run é seguro (no-op: devolve a mesma meta e nenhum título novo).
+ * O id da run é estável (`run-${startedAt}-${seed}`).
+ */
 export function recordRunEnd(
   meta: MetaState,
   run: RunState,
   result: RunResult,
   now: number,
 ): { meta: MetaState; newTitles: string[] } {
+  const id = `run-${run.startedAt}-${run.seed}`;
+  if (meta.lastRecordedRunId === id || meta.history.some((h) => h.id === id)) return { meta, newTitles: [] };
   const m = structuredClone(meta);
+  m.lastRecordedRunId = id;
   const c = run.character;
   m.lifetime.runs++;
   if (result === 'victory') m.lifetime.victories++;
@@ -123,7 +134,7 @@ export function recordRunEnd(
   m.masteredEver = [...new Set([...m.masteredEver, ...masteredNow])];
 
   m.history.unshift({
-    id: `run-${now}-${run.seed}`,
+    id,
     date: now,
     name: c.name,
     clan: c.clan,

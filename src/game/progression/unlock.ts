@@ -3,6 +3,7 @@ import type { AttrKey, StoryPointId } from '../types';
 import { JUTSU_LIST, type JutsuDef } from '../../data/jutsus';
 import { storyIndex } from '../../data/story';
 import type { PlayerCharacter } from './character';
+import { slotCount } from './loadout';
 
 /**
  * REGRA FIXA (spec §5): um jutsu é aprendido automaticamente quando o
@@ -47,7 +48,7 @@ export function checkUnlocks(
       next.learned.push(j.id);
       next.learnedAt[j.id] = { level: next.level, nodeIndex };
       learned.push(j.id);
-      if (next.equipped.length < B.loadout.geninSlots) next.equipped.push(j.id);
+      if (next.equipped.length < slotCount(next)) next.equipped.push(j.id);
       changed = true;
     }
   }

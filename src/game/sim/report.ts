@@ -7,7 +7,7 @@ export interface SimSummary {
   reachZabuza: number;
   beatZabuza: number;
   completed: number;
-  /** De quem venceu Zabuza, quantos venceram Haku (spec C6). */
+  /** De quem venceu Zabuza, quantos venceram Haku (spec C6). Sem vitórias sobre Zabuza fica 0 (exibido como "—"; ver `beatZabuza`). */
   hakuGivenZabuza: number;
   roundsZabuza: number;
   roundsHaku: number;
@@ -55,6 +55,10 @@ export function checkTargets(rows: SimSummary[]): string[] {
   for (const row of rows.filter((r) => r.build.focused)) {
     for (const [metric, [min, max]] of Object.entries(TARGETS) as [keyof typeof TARGETS, [number, number]][]) {
       const v = row[metric];
+      if (metric === 'hakuGivenZabuza' && row.beatZabuza === 0) {
+        failures.push(`${row.build.label}: hakuGivenZabuza indefinido (nenhuma run venceu Zabuza; meta ${min}–${max})`);
+        continue;
+      }
       if (v < min || v > max) failures.push(`${row.build.label}: ${metric} = ${v.toFixed(3)} (meta ${min}–${max})`);
     }
   }
@@ -69,7 +73,7 @@ export function formatTable(rows: SimSummary[]): string {
     '|---|---|---|---|---|---|---|---|---|';
   const lines = rows.map(
     (r) =>
-      `| ${r.build.label} | ${r.runs} | ${pct(r.reachZabuza)} | ${pct(r.beatZabuza)} | ${pct(r.completed)} | ${pct(r.hakuGivenZabuza)} | ` +
+      `| ${r.build.label} | ${r.runs} | ${pct(r.reachZabuza)} | ${pct(r.beatZabuza)} | ${pct(r.completed)} | ${r.beatZabuza === 0 ? '—' : pct(r.hakuGivenZabuza)} | ` +
       `${r.roundsZabuza.toFixed(1)} / ${r.roundsHaku.toFixed(1)} / ${r.roundsCommon.toFixed(1)} | ${pct(r.hpEndCommon)} | +${r.mainJutsuMastery.toFixed(1)} |`,
   );
   return [head, ...lines].join('\n');

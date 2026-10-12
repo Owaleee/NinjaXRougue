@@ -20,6 +20,37 @@ class MemoryStore implements KeyValueStore {
 const params: CreateParams = { name: 'Teste', clan: 'uzumaki', affinity: 'terra', allocation: { nin: 4, hp: 2, def: 2, vel: 1, crit: 1 }, titleId: null };
 
 describe('salvamento', () => {
+  it('run vencida (nodeIndex === nodes.length) volta do save; em outra fase é rejeitada', () => {
+    const store = new MemoryStore();
+    const r = newRun(params, 3, 0);
+    r.phase = 'victory';
+    r.nodeIndex = r.nodes.length;
+    saveRun(store, r);
+    expect(loadRun(store, 0)).toEqual({ value: r, error: null });
+    const bad = { ...r, phase: 'map' as const };
+    saveRun(store, bad);
+    const res = loadRun(store, 0);
+    expect(res.value).toBeNull();
+    expect(res.error).toContain('nodeIndex');
+  });
+
+  it('meta com lifetime vazio é rejeitada no load (quarentena + meta vazia com erro)', () => {
+    const store = new MemoryStore();
+    store.setItem(META_KEY, JSON.stringify({ ...emptyMeta(), lifetime: {} }));
+    const res = loadMeta(store, 5);
+    expect(res.value).toEqual(emptyMeta());
+    expect(res.error).not.toBeNull();
+    expect(store.getItem('nxr.meta.corrupt.5')).not.toBeNull();
+    expect(store.getItem(META_KEY)).toBeNull();
+  });
+
+  it('meta antiga sem lastRecordedRunId carrega com null', () => {
+    const store = new MemoryStore();
+    const { lastRecordedRunId: _omit, ...old } = emptyMeta();
+    store.setItem(META_KEY, JSON.stringify(old));
+    expect(loadMeta(store, 0)).toEqual({ value: emptyMeta(), error: null });
+  });
+
   it('ida e volta da run e da meta', () => {
     const store = new MemoryStore();
     const r = newRun(params, 3, 0);

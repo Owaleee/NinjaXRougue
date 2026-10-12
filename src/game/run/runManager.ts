@@ -239,6 +239,7 @@ function finishEncounter(r: RunState): GameEvent[] {
   r.nodeIndex++;
   if (r.nodeIndex >= r.nodes.length) {
     r.phase = 'victory';
+    // A run acabou: escolhas 1-de-3 pendentes são descartadas de propósito.
     r.pendingChoices = [];
     events.push({ type: 'runEnded', result: 'victory' });
   } else {

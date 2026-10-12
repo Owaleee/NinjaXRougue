@@ -46,6 +46,7 @@ export const BALANCE = {
     elementAdvantage: 1.3,
     elementDisadvantage: 0.8,
   },
+  // D..S são referência do DD v2 e não são lidos pelo motor (os poderes de jutsu vivem em src/data/jutsus.ts).
   power: { D: 26, C: 40, B: 60, A: 90, S: 130, attack: 18 },
   defense: { k: 50, cap: 0.6, totalCap: 0.75 },
   dodge: { basePct: 4, perVelPct: 0.8, capPct: 40 },

@@ -85,7 +85,7 @@ describe('geração de inimigos (spec C5)', () => {
     const b = createEnemy('bandido', 1);
     expect(sumAttributes(b.attrs)).toBe(35);
     expect(b).toMatchObject({ id: 'enemy:bandido', grade: 'D', damageMult: BALANCE.enemyGrades.D.damageMult, isBoss: false, side: 'enemy' });
-    expect(b.maxHp).toBe(Math.round(maxHp(b.attrs.hp, 1) * 0.8));
+    expect(b.maxHp).toBe(Math.round(maxHp(b.attrs.hp, 1) * BALANCE.enemyGrades.D.hpMult));
     expect(b.hp).toBe(b.maxHp);
   });
 

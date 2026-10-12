@@ -5,6 +5,7 @@ import { maxChakra, maxHp, xpToNext } from '../formulas';
 import { ATTR_KEYS, type Attributes, type ClanId, type Element } from '../types';
 import { CLANS } from '../../data/clans';
 import { ITEMS } from '../../data/items';
+import { TITLES } from '../../data/titles';
 
 /**
  * O personagem do jogador DENTRO de uma run (tudo aqui morre com a run).
@@ -58,6 +59,7 @@ export function createCharacter(p: CreateParams): PlayerCharacter {
   if (name.length < 1 || name.length > 20) throw new RuleError('invalidName', 'O nome precisa ter de 1 a 20 caracteres.');
   const clan = CLANS[p.clan];
   if (!clan?.playable) throw new RuleError('invalidClan', `Clã não jogável: ${p.clan}`);
+  if (p.titleId != null && !TITLES[p.titleId]) throw new RuleError('unknownTitle', `Título desconhecido: ${p.titleId}`);
   const alloc = normalizeAllocation(p.allocation);
   if (sumAttributes(alloc) !== B.attributes.creationPoints) {
     throw new RuleError('invalidAllocation', `Distribua exatamente ${B.attributes.creationPoints} pontos.`);

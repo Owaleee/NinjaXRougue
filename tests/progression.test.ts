@@ -24,6 +24,11 @@ const ninAlloc = { nin: 4, hp: 2, def: 2, vel: 1, crit: 1 };
 const J = (id: string) => JUTSUS[id]!;
 
 describe('criação de personagem', () => {
+  it('rejeita título inexistente', () => {
+    expect(() => createCharacter({ ...base, clan: 'uzumaki', allocation: ninAlloc, titleId: 'nao_existe' })).toThrow(RuleError);
+    expect(() => createCharacter({ ...base, clan: 'uzumaki', allocation: ninAlloc, titleId: 'demonio_da_nevoa' })).not.toThrow();
+  });
+
   it('começa com 50 pontos, nível 1, HP e chakra cheios', () => {
     const c = createCharacter({ ...base, clan: 'uzumaki', allocation: ninAlloc });
     expect(sumAttributes(c.baseAttrs)).toBe(50);
