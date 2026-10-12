@@ -9,6 +9,9 @@ import { PrepScreen } from './PrepScreen';
 import { SheetScreen } from './SheetScreen';
 import { ResultScreen } from './ResultScreen';
 import { RunEndScreen } from './RunEndScreen';
+import { EncyclopediaScreen } from './EncyclopediaScreen';
+import { HistoryScreen } from './HistoryScreen';
+import { TitlesScreen } from './TitlesScreen';
 
 /** Registro de telas. Cada task de tela acrescenta a sua aqui. */
 export const SCREENS: Partial<Record<ScreenId, ScreenRenderer>> = {
@@ -20,6 +23,9 @@ export const SCREENS: Partial<Record<ScreenId, ScreenRenderer>> = {
   runEnd: RunEndScreen,
   prep: PrepScreen,
   sheet: SheetScreen,
+  encyclopedia: EncyclopediaScreen,
+  history: HistoryScreen,
+  titles: TitlesScreen,
 };
 
 export const KEYS: Partial<Record<ScreenId, KeyHandler>> = {};
