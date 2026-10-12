@@ -6,7 +6,7 @@ import { CLANS, PLAYABLE_CLANS } from '../../data/clans';
 import { JUTSUS } from '../../data/jutsus';
 import { pct, t } from '../../i18n/pt-BR';
 import { allocationPanel } from '../components/allocation';
-import { button, h } from '../dom';
+import { button, clear, h } from '../dom';
 import type { ScreenRenderer } from '../types';
 import { creationPreview } from '../view/derived';
 
@@ -37,21 +37,40 @@ export const CreateScreen: ScreenRenderer = (ctx) => {
   const remaining = points - sumAttributes(d.alloc);
   const preview = creationPreview(d.clan, affinity, d.alloc);
 
+  // Motivo visível de o botão "Começar" estar desabilitado (spec §10: não depender só do botão).
+  // Atualizado no próprio evento de input: redesenhar a tela a cada tecla tiraria o foco do campo.
+  const reasonBox = h('div', { attrs: { role: 'status' } });
+  const startBtn = button(t('create.start'), () => start(), { primary: true });
+  const refreshStart = () => {
+    const reasons: string[] = [];
+    if (!d.name.trim()) reasons.push(t('create.needName'));
+    if (remaining !== 0) reasons.push(t('create.needPoints', { n: remaining }));
+    startBtn.disabled = reasons.length > 0;
+    clear(reasonBox);
+    for (const msg of reasons) reasonBox.appendChild(h('p', { class: 'muted' }, msg));
+  };
+  refreshStart();
+
   const nameInput = h('input', {
     type: 'text',
     value: d.name,
     attrs: { name: 'name', maxlength: '20', placeholder: t('create.namePlaceholder'), 'aria-label': t('create.name') },
-    on: { input: (e) => (d.name = (e.target as HTMLInputElement).value) },
+    on: {
+      input: (e) => {
+        d.name = (e.target as HTMLInputElement).value;
+        refreshStart();
+      },
+    },
   });
 
   const clanCards = PLAYABLE_CLANS.map((id) =>
     h(
       'div',
       { class: `card ${id === d.clan ? 'selected' : ''}` },
-      button(CLANS[id].name, () => {
+      button(id === d.clan ? `${t('create.selectedMark')} ${CLANS[id].name}` : CLANS[id].name, () => {
         d.clan = id;
         ctx.rerender();
-      }, { primary: id === d.clan }),
+      }, { primary: id === d.clan, attrs: { 'aria-pressed': String(id === d.clan) } }),
       h('p', { class: 'muted' }, CLANS[id].description),
     ),
   );
@@ -133,7 +152,8 @@ export const CreateScreen: ScreenRenderer = (ctx) => {
       'div',
       { class: 'row' },
       button(t('common.back'), () => store.back()),
-      button(t('create.start'), start, { primary: true, disabled: remaining !== 0 }),
+      startBtn,
+      reasonBox,
     ),
   );
 };
