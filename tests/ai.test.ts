@@ -8,6 +8,7 @@ import { sumAttributes } from '../src/game/attributes';
 import { maxHp } from '../src/game/formulas';
 import { RuleError } from '../src/game/errors';
 import { makeCombatant, type CombatantOverrides } from './helpers';
+import { BALANCE } from '../src/game/Balance';
 
 function battleWith(enemy: Combatant): BattleState {
   const player = makeCombatant({ id: 'player', side: 'player', element: 'fogo' });
@@ -83,19 +84,19 @@ describe('geração de inimigos (spec C5)', () => {
   it('Bandido nível 1 tem 35 pontos (P(1) × 0,70)', () => {
     const b = createEnemy('bandido', 1);
     expect(sumAttributes(b.attrs)).toBe(35);
-    expect(b).toMatchObject({ id: 'enemy:bandido', grade: 'D', damageMult: 0.6, isBoss: false, side: 'enemy' });
+    expect(b).toMatchObject({ id: 'enemy:bandido', grade: 'D', damageMult: BALANCE.enemyGrades.D.damageMult, isBoss: false, side: 'enemy' });
     expect(b.maxHp).toBe(Math.round(maxHp(b.attrs.hp, 1) * 0.8));
     expect(b.hp).toBe(b.maxHp);
   });
 
-  it('Zabuza nível 5 (C) e Haku nível 10 (B, HP ×1,5)', () => {
+  it('Zabuza nível 5 (C) e Haku nível 10 (B) aplicam o HP do grau', () => {
     const z = createEnemy('zabuza', 5);
     expect(sumAttributes(z.attrs)).toBe(86);
-    expect(z.maxHp).toBe(Math.round(maxHp(z.attrs.hp, 5) * 1.3));
+    expect(z.maxHp).toBe(Math.round(maxHp(z.attrs.hp, 5) * BALANCE.enemyGrades.C.hpMult));
     expect(z).toMatchObject({ isBoss: true, element: 'agua', ai: 'zabuza' });
     const h = createEnemy('haku', 10);
     expect(sumAttributes(h.attrs)).toBe(136);
-    expect(h.maxHp).toBe(Math.round(maxHp(h.attrs.hp, 10) * 1.5));
+    expect(h.maxHp).toBe(Math.round(maxHp(h.attrs.hp, 10) * BALANCE.enemyGrades.B.hpMult));
   });
 
   it('template desconhecido gera RuleError', () => {

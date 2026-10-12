@@ -18,7 +18,7 @@ const enemyGrades: Record<Grade, GradeScaling> = {
   D: { pointsRatio: 0.7, hpMult: 0.8, damageMult: 0.65 },
   'D+': { pointsRatio: 0.9, hpMult: 1.0, damageMult: 0.8 },
   C: { pointsRatio: 1.1, hpMult: 2.1, damageMult: 0.81 },
-  B: { pointsRatio: 1.2, hpMult: 1.7, damageMult: 0.8 }, // spec C6: HP 1,3 → 1,5
+  B: { pointsRatio: 1.2, hpMult: 1.7, damageMult: 0.8 }, // spec C6: HP 1,3 → 1,5; calibrado para 1,7 pelo simulador (docs/balance-log.md)
   A: { pointsRatio: 1.35, hpMult: 1.5, damageMult: 0.9 },
   S: { pointsRatio: 1.5, hpMult: 1.7, damageMult: 1.0 },
 };
