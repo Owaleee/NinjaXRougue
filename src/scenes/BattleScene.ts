@@ -90,10 +90,10 @@ export class BattleScene extends Phaser.Scene {
         const element = e.jutsuId ? (JUTSUS[e.jutsuId]?.element ?? null) : null;
         this.flash(e.targetId, element ? (ELEMENT_COLOR[element] ?? 0xffffff) : 0xffffff);
         this.shake(e.targetId);
-        return this.float(e.targetId, `-${e.amount}${e.crit ? ` ${t('fx.crit')}` : ''}`, e.crit ? '#ffd23f' : '#ff5a4f', e.crit ? 34 : 26);
+        return this.float(e.targetId, e.crit ? t('fx.damageCrit', { n: e.amount, crit: t('fx.crit') }) : t('fx.damage', { n: e.amount }), e.crit ? '#ffd23f' : '#ff5a4f', e.crit ? 34 : 26);
       }
       case 'dot':
-        return this.float(e.targetId, `-${e.amount}`, '#ff8c42', 22);
+        return this.float(e.targetId, t('fx.damage', { n: e.amount }), '#ff8c42', 22);
       case 'dodge':
         return this.float(e.targetId, t('fx.dodge'), '#cfd8dc', 26);
       case 'miss':
@@ -101,7 +101,7 @@ export class BattleScene extends Phaser.Scene {
       case 'negated':
         return this.float(e.targetId, t('fx.negated'), '#b98ce8', 26);
       case 'heal':
-        return this.float(e.targetId, `+${e.hp}`, '#59c98a', 26);
+        return this.float(e.targetId, t('fx.heal', { n: e.hp }), '#59c98a', 26);
       case 'effectApplied':
         return this.float(e.targetId, EFFECTS[e.effectId]?.name ?? e.effectId, '#b98ce8', 18);
       case 'transformOn':

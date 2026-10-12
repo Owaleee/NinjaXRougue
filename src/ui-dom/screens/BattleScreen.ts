@@ -52,6 +52,19 @@ function toggleItems(ctx: ScreenCtx): void {
   ctx.rerender();
 }
 
+type BasicKind = 'attack' | 'defend' | 'meditate' | 'item' | 'transform';
+
+/**
+ * Por que um botão básico está apagado (null = liberado), fora a trava de animação.
+ * Botão e atalho usam ESTA função: teclado e clique nunca divergem.
+ */
+function basicBlock(b: BattleState, kind: BasicKind): 'illusion' | 'toggled' | 'noForm' | null {
+  if (b.onlyKai) return 'illusion';
+  if (kind !== 'transform') return null;
+  if (!getPlayer(b).transformationId) return 'noForm';
+  return b.transformToggled ? 'toggled' : null;
+}
+
 /** Motivo visível de um jutsu apagado (spec §10: nunca só pela cor). */
 function jutsuReason(j: JutsuButton): string | null {
   if (!j.allowed) return t('battle.reason.illusion');
@@ -75,14 +88,28 @@ function fighterPanel(ctx: ScreenCtx, v: CombatantView, side: 'player' | 'enemy'
         ? button(t('battle.sheet'), () => ctx.store.go('sheet'), { disabled: ctx.store.state.locked, attrs: { 'data-sheet': '' } })
         : null,
     ),
-    h('div', { class: 'muted' }, `${t('derived.power')}: ${v.power}`),
+    h('div', { class: 'muted' }, t('battle.stat', { label: t('derived.power'), value: v.power })),
     bar('hp', v.hp, v.maxHp, t('header.hp')),
     bar('chakra', v.chakra, v.maxChakra, t('header.chakra')),
-    h('div', { class: 'muted' }, `${t('derived.crit')}: ${pct(v.critPct)} · ${t('derived.reduction')}: ${pct(v.reductionPct)} · ${t('derived.dodge')}: ${pct(v.dodgePct)}`),
+    h(
+      'div',
+      { class: 'muted' },
+      [
+        t('battle.stat', { label: t('derived.crit'), value: pct(v.critPct) }),
+        t('battle.stat', { label: t('derived.reduction'), value: pct(v.reductionPct) }),
+        t('battle.stat', { label: t('derived.dodge'), value: pct(v.dodgePct) }),
+      ].join(t('battle.statSep')),
+    ),
     h(
       'div',
       { class: 'effects' },
-      ...v.effects.map((e) => h('span', { class: 'effect-chip', title: e.description }, `${e.name} ${e.sustained || e.remaining === null ? '∞' : e.remaining}`)),
+      ...v.effects.map((e) =>
+        h(
+          'span',
+          { class: 'effect-chip', title: e.description },
+          t('battle.effectChip', { name: e.name, n: e.sustained || e.remaining === null ? t('battle.permanent') : e.remaining }),
+        ),
+      ),
     ),
   );
 }
@@ -112,23 +139,23 @@ export const BattleScreen: ScreenRenderer = (ctx) => {
         ? t('battle.ended')
         : t('battle.enemyTurn');
 
-  const blockedBasic = !live || battle.onlyKai;
+  const off = (kind: BasicKind) => !live || basicBlock(battle, kind) !== null;
   const form = p.transformationId ? (EFFECTS[p.transformationId]?.name ?? p.transformationId) : '';
   const pv = combatantView(p, e);
   const transformLabel = pv.transformed ? t('battle.transformOff', { form }) : t('battle.transformOn', { form });
   const basic = [
-    button(t('battle.attack'), () => doAct(ctx, { type: 'attack' }), { disabled: blockedBasic, attrs: { 'data-action': 'attack' } }),
-    button(t('battle.defend'), () => doAct(ctx, { type: 'defend' }), { disabled: blockedBasic, attrs: { 'data-action': 'defend' } }),
-    button(t('battle.meditate'), () => doAct(ctx, { type: 'meditate' }), { disabled: blockedBasic, attrs: { 'data-action': 'meditate' } }),
+    button(t('battle.attack'), () => doAct(ctx, { type: 'attack' }), { disabled: off('attack'), attrs: { 'data-action': 'attack' } }),
+    button(t('battle.defend'), () => doAct(ctx, { type: 'defend' }), { disabled: off('defend'), attrs: { 'data-action': 'defend' } }),
+    button(t('battle.meditate'), () => doAct(ctx, { type: 'meditate' }), { disabled: off('meditate'), attrs: { 'data-action': 'meditate' } }),
     button(t('battle.item'), () => toggleItems(ctx), {
-      disabled: blockedBasic,
+      disabled: off('item'),
       attrs: { 'data-action': 'item', 'aria-expanded': String(ui.items) },
     }),
     p.transformationId
       ? button(
-          battle.transformToggled ? t('battle.withReason', { label: transformLabel, reason: t('battle.reason.toggled') }) : transformLabel,
+          basicBlock(battle, 'transform') === 'toggled' ? t('battle.withReason', { label: transformLabel, reason: t('battle.reason.toggled') }) : transformLabel,
           () => doAct(ctx, { type: 'transform' }),
-          { disabled: blockedBasic || battle.transformToggled, attrs: { 'data-action': 'transform' } },
+          { disabled: off('transform'), attrs: { 'data-action': 'transform' } },
         )
       : null,
   ];
@@ -205,7 +232,7 @@ export const BattleScreen: ScreenRenderer = (ctx) => {
   );
 };
 
-const DIRECT: Record<string, Action> = {
+const DIRECT: Record<string, Action & { type: BasicKind }> = {
   a: { type: 'attack' },
   d: { type: 'defend' },
   m: { type: 'meditate' },
@@ -229,15 +256,17 @@ export const battleKeys: KeyHandler = (ctx, e) => {
   const battle = liveBattle(ctx.store.state);
   if (!battle) return;
   const direct = DIRECT[k];
+  // Tecla segurada não repete ações; botão apagado = atalho ignorado em silêncio.
   if (direct) {
-    if (k === 't' && !getPlayer(battle).transformationId) return;
+    if (e.repeat || basicBlock(battle, direct.type) !== null) return;
     e.preventDefault();
     return doAct(ctx, direct);
   }
   if (k === 'i') {
-    if (battle.onlyKai) return;
+    if (e.repeat || basicBlock(battle, 'item') !== null) return;
     return toggleItems(ctx);
   }
+  if (e.repeat) return;
   if (/^[1-4]$/.test(k)) {
     const j = jutsuButtons(battle)[Number(k) - 1];
     if (j && jutsuReason(j) === null) pickJutsu(ctx, j.id);

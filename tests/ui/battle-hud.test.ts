@@ -192,3 +192,56 @@ describe('HUD de batalha — Esc e acessibilidade (spec §10)', () => {
     expect(side).toContain(`Chakra: ${p.chakra}/${p.maxChakra}`);
   });
 });
+
+describe('HUD de batalha — atalhos seguem o estado dos botões (rodada 1)', () => {
+  /** Conta os eventos publicados ao animador depois do início da luta. */
+  function watched(patch?: (run: RunState) => void) {
+    const { store } = scenario(patch);
+    const root = mount(store);
+    store.fight();
+    const events: GameEvent[] = [];
+    store.onBattleEvents((ev) => {
+      events.push(...ev);
+      store.animationsDone();
+    });
+    return { store, root, events };
+  }
+
+  it('sob Ilusão: A, D, M, I e T não geram ação nem aviso', () => {
+    const { store, root, events } = watched((run) => {
+      run.character.clan = 'uchiha';
+      run.character.affinity = 'fogo';
+    });
+    // Montar uma Ilusão "de verdade" depende de sorteio do inimigo; aqui marcamos o
+    // estado que o motor exige (onlyKai) direto na batalha em memória.
+    store.state.run!.battle!.onlyKai = true;
+    const run = store.state.run;
+    for (const k of ['a', 'd', 'm', 't', 'i']) press(k);
+    expect(events).toEqual([]);
+    expect(store.state.notices).toEqual([]);
+    expect(store.state.run).toBe(run);
+    expect(root.textContent).not.toContain('Nenhum consumível');
+  });
+
+  it('Uchiha: T alterna uma vez; T de novo no mesmo turno não gera ação nem aviso', () => {
+    const { store, events } = watched((run) => {
+      run.character.clan = 'uchiha';
+      run.character.affinity = 'fogo';
+    });
+    press('t');
+    expect(events.filter((e) => e.type === 'transformOn')).toHaveLength(1);
+    const count = events.length;
+    const run = store.state.run;
+    press('t');
+    expect(events).toHaveLength(count);
+    expect(store.state.run).toBe(run);
+    expect(store.state.notices).toEqual([]);
+  });
+
+  it('tecla segurada (repeat) não age', () => {
+    const { store, events } = watched();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', repeat: true }));
+    expect(events).toEqual([]);
+    expect(store.state.notices).toEqual([]);
+  });
+});
