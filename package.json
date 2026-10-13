@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "sim": "tsx tools/simulate.ts",
-    "sim:check": "tsx tools/simulate.ts --check"
+    "sim:check": "tsx tools/simulate.ts --check",
+    "docs:check": "tsx tools/docs-check.ts"
   },
   "dependencies": {
     "phaser": "~3.88.2",
