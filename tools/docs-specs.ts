@@ -20,4 +20,7 @@ export const DOC_SPECS: DocSpec[] = [
   { path: 'docs/curso/alfa-0.1.md', headings: ['Alfa 0.1 — Projeto e RNG com semente', ...COURSE_HEADINGS], course: true },
   { path: 'docs/curso/alfa-0.2.md', headings: ['Alfa 0.2 — Tipos, constantes e fórmulas', ...COURSE_HEADINGS], course: true, minFacts: 4 },
   { path: 'docs/curso/alfa-0.3.md', headings: ['Alfa 0.3 — Dados do jogo e validação', ...COURSE_HEADINGS], course: true },
+  { path: 'docs/curso/alfa-0.4.md', headings: ['Alfa 0.4 — Personagem e progressão', ...COURSE_HEADINGS], course: true, minFacts: 2 },
+  { path: 'docs/curso/alfa-0.5.md', headings: ['Alfa 0.5 — Efeitos e resolução de golpe', ...COURSE_HEADINGS], course: true, minFacts: 3 },
+  { path: 'docs/curso/alfa-0.6.md', headings: ['Alfa 0.6 — Batalha por turnos e IA', ...COURSE_HEADINGS], course: true, minFacts: 3 },
 ];
