@@ -1,4 +1,4 @@
-import type { DocSpec } from './docs-lib';
+import { COURSE_HEADINGS, type DocSpec } from './docs-lib';
 
 /** Cada task de documento do Plano 3 acrescenta a sua entrada aqui. */
 export const DOC_SPECS: DocSpec[] = [
@@ -16,4 +16,8 @@ export const DOC_SPECS: DocSpec[] = [
     ],
     minFacts: 6,
   },
+  { path: 'docs/curso/README.md', headings: ['Curso: do zero ao NarutoTxGame', 'Como ler', 'Versões', 'Pré-requisitos'] },
+  { path: 'docs/curso/alfa-0.1.md', headings: ['Alfa 0.1 — Projeto e RNG com semente', ...COURSE_HEADINGS], course: true },
+  { path: 'docs/curso/alfa-0.2.md', headings: ['Alfa 0.2 — Tipos, constantes e fórmulas', ...COURSE_HEADINGS], course: true, minFacts: 4 },
+  { path: 'docs/curso/alfa-0.3.md', headings: ['Alfa 0.3 — Dados do jogo e validação', ...COURSE_HEADINGS], course: true },
 ];
