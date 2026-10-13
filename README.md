@@ -74,7 +74,7 @@ docs/          registro de balanceamento, especificação e planos
 
 ## Problemas conhecidos
 
-- 8 metas de balanceamento ainda estão fora da faixa; veja `docs/balance-log.md`.
+- Em 5 das 6 builds focadas, alguma métrica fica fora da meta de design da spec §12; o `sim:check` as cobre com faixas de regressão por build (ver `docs/balance-log.md`). Uchiha fica no limite e Uzumaki vence o Haku em cerca de 95% das vezes.
 - `npm run sim` (3000 runs por build) leva cerca de 141 s.
 
 ## Documentação

@@ -471,9 +471,11 @@ export class GameStore {
       locked: animate,
     });
 
+    // Se o render do passo acima já levou o jogo à tela de erro, ela não pode ser sobrescrita
+    // (nem pela batalha animada, nem pela navegação de fase).
+    if (this.isError()) return true;
+
     if (animate) {
-      // Se o render do passo acima já levou o jogo à tela de erro, ela não pode ser sobrescrita.
-      if (this.isError()) return true;
       // A batalha precisa estar na tela para ser animada; sair dela espera a animação.
       if (this.s.screen !== 'battle') this.set({ screen: 'battle', history: [] });
       if (this.isError()) return true;

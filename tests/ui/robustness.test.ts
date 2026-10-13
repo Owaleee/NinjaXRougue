@@ -51,6 +51,22 @@ describe('Robustez — erro de render', () => {
     expect(store.state.locked).toBe(false);
   });
 
+  it('sem animador, o render que quebra no passo também não é sobrescrito ao mudar de fase', () => {
+    const { store } = scenario();
+    let broken = false;
+    mountWith(store, {
+      map: (ctx) => {
+        if (broken) throw new Error('mapa quebrou');
+        return SCREENS.map!(ctx);
+      },
+    });
+    expect(store.state.screen).toBe('map');
+    broken = true;
+    store.fight(); // sem onBattleEvents: o passo não anima, mas a fase muda de mapa para batalha
+    expect(store.state.screen).toBe('error');
+    expect(store.state.locked).toBe(false);
+  });
+
   it('ErrorScreen que também lança não derruba o App', () => {
     const { store } = scenario();
     const root = mountWith(store, {
