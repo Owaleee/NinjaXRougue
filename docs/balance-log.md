@@ -136,3 +136,20 @@ Tempo: 141.1 s (3000 runs × 8 builds)
 **Problema conhecido:** o relatório de 3000 runs/build levou 141,1 s, acima do limite de 30 s. O `sim:check` (1000 runs) leva 33–45 s. A otimização fica para o Plano 2, se necessário.
 
 Com 3000 runs, Nin/Uchiha vence Zabuza em 41% e completa 31%, abaixo da medição de 1000 runs: o limite inferior não tem folga.
+
+## Decisão: faixas por build (Plano 3, 2026-10-12)
+
+A spec §13 pede `sim:check` verde para o MVP estar pronto. Depois de 4 iterações de calibração, 8 metas seguiam fora da faixa por uma razão estrutural: a distância entre a build mais fraca (Uchiha) e a mais forte (Uzumaki) é maior que a largura das faixas da spec §12, e os botões de calibração de grau movem todas as builds juntas. O usuário escolheu **faixas por build**: as metas de design da spec continuam impressas como "distância" (`designGaps`), e `sim:check` passa a proteger contra **regressão**: cada build que mede fora da meta ganha uma faixa própria em `src/game/sim/report.ts` (`BUILD_BANDS`), nunca mais estreita que a meta. Nenhum valor de `Balance.ts` mudou.
+
+| Build | Métrica | Medido (1000 runs) | Meta de design | Faixa da build |
+|---|---|---|---|---|
+| Ninjutsu / Uchiha | vence Zabuza | 44,7% | 45–75% | 40–75% |
+| Ninjutsu / Uchiha | completa a saga | 33,8% | 35–70% | 30–70% |
+| Ninjutsu / Uzumaki | Haku dado Zabuza | 95,4% | 70–85% | 70–97% |
+| Ninjutsu / Sem clã | Haku dado Zabuza | 92,4% | 70–85% | 70–95% |
+| Taijutsu / Uzumaki | Haku dado Zabuza | 93,9% | 70–85% | 70–97% |
+| Taijutsu / Uzumaki | maestria do jutsu principal | +4,45 | +2 a +4 | +2 a +4,6 |
+| Taijutsu / Sem clã | HP no fim dos comuns | 74,5% | 75–85% | 72–85% |
+| Taijutsu / Sem clã | maestria do jutsu principal | +4,04 | +2 a +4 | +2 a +4,2 |
+
+**O que isso NÃO resolve:** o jogo continua mais fácil para Uzumaki (Haku quase sempre cai) e no limite para Uchiha (vence Zabuza em ~41% com 3000 runs). Decisões de design que fechariam a diferença de verdade (fora dos botões): tirar kits da escolha 1-de-3 ou reduzir a cura do kit (40% para 25–30%), e revisar a passiva do Uzumaki. Ficam para depois de o usuário jogar.

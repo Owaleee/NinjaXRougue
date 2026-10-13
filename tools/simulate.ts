@@ -1,11 +1,11 @@
 /**
  * Simulador headless (DD v2 §18).
- *   npm run sim                 → 3000 runs por build, imprime a tabela
- *   npm run sim:check           → 1000 runs por build e falha (exit 1) se alguma meta sair da faixa
+ *   npm run sim                 → 3000 runs por build, imprime a tabela e a distância das metas de design
+ *   npm run sim:check           → 1000 runs por build e falha (exit 1) se uma build sair da SUA faixa de regressão
  *   npm run sim -- --runs 200   → quantidade customizada
  */
 import { SIM_BUILDS } from '../src/game/sim/builds';
-import { checkTargets, formatTable, simulateMany } from '../src/game/sim/report';
+import { checkTargets, designGaps, formatTable, simulateMany } from '../src/game/sim/report';
 
 const args = process.argv.slice(2);
 const check = args.includes('--check');
@@ -21,11 +21,14 @@ const rows = SIM_BUILDS.map((b, i) => simulateMany(b, runs, 100_000 * (i + 1)));
 console.log(formatTable(rows));
 console.log(`\nTempo: ${((performance.now() - t0) / 1000).toFixed(1)} s (${runs} runs × ${SIM_BUILDS.length} builds)`);
 
+const gaps = designGaps(rows);
+if (gaps.length) console.log(`\nDistância das metas de design (informativo, não derruba o check):\n- ${gaps.join('\n- ')}`);
+
 if (check) {
   const failures = checkTargets(rows);
   if (failures.length) {
     console.error(`\n${failures.length} meta(s) fora da faixa:\n- ${failures.join('\n- ')}`);
     process.exit(1);
   }
-  console.log('\nTodas as metas de balanceamento foram atingidas.');
+  console.log('\nNenhuma build saiu da sua faixa de regressão.');
 }

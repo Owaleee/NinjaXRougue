@@ -39,8 +39,8 @@ export function simulateMany(build: BuildDef, runs: number, seedBase: number): S
   };
 }
 
-/** Metas da spec §12 (faixas inclusivas), aplicadas às builds focadas. */
-export const TARGETS: Record<'hpEndCommon' | 'roundsCommon' | 'reachZabuza' | 'beatZabuza' | 'completed' | 'hakuGivenZabuza' | 'mainJutsuMastery', [number, number]> = {
+/** Metas de DESIGN da spec §12 (faixas inclusivas), aplicadas às builds focadas. */
+export const TARGETS = {
   hpEndCommon: [0.75, 0.85],
   roundsCommon: [2, 4],
   reachZabuza: [0.95, 1],
@@ -48,21 +48,77 @@ export const TARGETS: Record<'hpEndCommon' | 'roundsCommon' | 'reachZabuza' | 'b
   completed: [0.35, 0.7],
   hakuGivenZabuza: [0.7, 0.85],
   mainJutsuMastery: [2, 4],
+} as const satisfies Record<string, readonly [number, number]>;
+
+export type Metric = keyof typeof TARGETS;
+export type Band = [number, number];
+
+/**
+ * Faixas de REGRESSÃO por build (decisão do usuário, 2026-10-12; ver docs/balance-log.md).
+ * A diferença entre as builds (Uchiha mais fraca contra chefes, Uzumaki mais resistente) é maior
+ * que a largura das metas de design; então cada build que mede fora da meta ganha uma faixa
+ * própria, nunca mais estreita que a meta. `sim:check` falha se uma build sair da SUA faixa;
+ * a distância para a meta de design continua impressa por `designGaps`.
+ */
+export const BUILD_BANDS: Record<string, Partial<Record<Metric, Band>>> = {
+  'nin-uchiha': { beatZabuza: [0.4, 0.75], completed: [0.3, 0.7] },
+  'nin-uzumaki': { hakuGivenZabuza: [0.7, 0.97] },
+  'nin-semcla': { hakuGivenZabuza: [0.7, 0.95] },
+  'tai-uzumaki': { hakuGivenZabuza: [0.7, 0.97], mainJutsuMastery: [2, 4.6] },
+  'tai-semcla': { hpEndCommon: [0.72, 0.85], mainJutsuMastery: [2, 4.2] },
 };
 
+export function bandFor(buildId: string, metric: Metric): Band {
+  const own = BUILD_BANDS[buildId]?.[metric];
+  const [lo, hi] = own ?? TARGETS[metric];
+  return [lo, hi];
+}
+
+const METRICS = Object.keys(TARGETS) as Metric[];
+
+function outside(row: SimSummary, metric: Metric, band: Band): string | null {
+  const [min, max] = band;
+  if (metric === 'hakuGivenZabuza' && row.beatZabuza === 0) return 'indefinido (nenhuma run venceu Zabuza)';
+  const v = row[metric];
+  return v < min || v > max ? v.toFixed(3) : null;
+}
+
+/** Falhas de regressão: cada build focada contra a sua faixa. */
 export function checkTargets(rows: SimSummary[]): string[] {
   const failures: string[] = [];
   for (const row of rows.filter((r) => r.build.focused)) {
-    for (const [metric, [min, max]] of Object.entries(TARGETS) as [keyof typeof TARGETS, [number, number]][]) {
-      const v = row[metric];
-      if (metric === 'hakuGivenZabuza' && row.beatZabuza === 0) {
-        failures.push(`${row.build.label}: hakuGivenZabuza indefinido (nenhuma run venceu Zabuza; meta ${min}–${max})`);
-        continue;
-      }
-      if (v < min || v > max) failures.push(`${row.build.label}: ${metric} = ${v.toFixed(3)} (meta ${min}–${max})`);
+    for (const metric of METRICS) {
+      const band = bandFor(row.build.id, metric);
+      const bad = outside(row, metric, band);
+      if (bad === null) continue;
+      const own = BUILD_BANDS[row.build.id]?.[metric] !== undefined;
+      const rule = own ? `faixa da build ${band[0]}–${band[1]}` : `meta ${band[0]}–${band[1]}`;
+      failures.push(
+        bad.startsWith('indefinido')
+          ? `${row.build.label}: ${metric} ${bad}; ${rule}`
+          : `${row.build.label}: ${metric} = ${bad} (${rule})`,
+      );
     }
   }
   return failures;
+}
+
+/** Distância para as metas de DESIGN (informativo: não derruba o check). */
+export function designGaps(rows: SimSummary[]): string[] {
+  const gaps: string[] = [];
+  for (const row of rows.filter((r) => r.build.focused)) {
+    for (const metric of METRICS) {
+      const [min, max] = TARGETS[metric];
+      const bad = outside(row, metric, [min, max]);
+      if (bad === null) continue;
+      gaps.push(
+        bad.startsWith('indefinido')
+          ? `${row.build.label}: ${metric} ${bad}; meta de design ${min}–${max}`
+          : `${row.build.label}: ${metric} = ${bad} (meta de design ${min}–${max})`,
+      );
+    }
+  }
+  return gaps;
 }
 
 const pct = (v: number) => `${(v * 100).toFixed(0)}%`;
