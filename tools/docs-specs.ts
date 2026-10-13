@@ -23,4 +23,7 @@ export const DOC_SPECS: DocSpec[] = [
   { path: 'docs/curso/alfa-0.4.md', headings: ['Alfa 0.4 — Personagem e progressão', ...COURSE_HEADINGS], course: true, minFacts: 2 },
   { path: 'docs/curso/alfa-0.5.md', headings: ['Alfa 0.5 — Efeitos e resolução de golpe', ...COURSE_HEADINGS], course: true, minFacts: 3 },
   { path: 'docs/curso/alfa-0.6.md', headings: ['Alfa 0.6 — Batalha por turnos e IA', ...COURSE_HEADINGS], course: true, minFacts: 3 },
+  { path: 'docs/curso/alfa-0.7.md', headings: ['Alfa 0.7 — Loja, run e meta-progressão', ...COURSE_HEADINGS], course: true, minFacts: 3 },
+  { path: 'docs/curso/alfa-0.8.md', headings: ['Alfa 0.8 — Save e simulador', ...COURSE_HEADINGS], course: true, minFacts: 2 },
+  { path: 'docs/curso/beta-0.9.0.md', headings: ['Beta 0.9.0 — Casca da interface e GameStore', ...COURSE_HEADINGS], course: true },
 ];
