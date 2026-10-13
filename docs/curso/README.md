@@ -25,9 +25,9 @@ Este curso reconstrói o NarutoTxGame, um roguelike de batalhas por turnos ambie
 | Alfa 0.7 | Loja, run e meta-progressão | [alfa-0.7.md](alfa-0.7.md) | bbc2e8f, 6d7f716, 9b57eeb, e47876f |
 | Alfa 0.8 | Save e simulador | [alfa-0.8.md](alfa-0.8.md) | 3df4c72, c8dc2ea, 3395adb, 6b09742, e4db64a |
 | Beta 0.9.0 | Casca da interface e GameStore | [beta-0.9.0.md](beta-0.9.0.md) | 0d07169, 593aeca, ff7bc45, cbb351a, c8b9b93, 1dfd7cd |
-| Beta 0.9.1 | Telas | [beta-0.9.1.md](beta-0.9.1.md) | 5425a49, f015e01, a369ca2, 52d7088, e148bb1 e correções |
+| Beta 0.9.1 | Telas | [beta-0.9.1.md](beta-0.9.1.md) | 5425a49, f015e01, a369ca2, 52d7088, e148bb1, 230e841, f8eba1e, 742335d, 2a4f2a7, 4e57c67 |
 | Beta 0.9.2 | Batalha em Phaser | [beta-0.9.2.md](beta-0.9.2.md) | 9ab3025, 95f4d50 |
-| 1.0 | Robustez, calibração e entrega | [1.0.md](1.0.md) | 0b6fbee, 5aa63f0, bec6a2e e as tasks de código do Plano 3 |
+| 1.0 | Robustez, calibração e entrega | [1.0.md](1.0.md) | 0b6fbee, 5aa63f0, bec6a2e, eb896db, 62aad39, 68d6179, 597df55, ced92e8 |
 
 ## Pré-requisitos
 
