@@ -1144,3 +1144,568 @@ O Histórico é persistido junto com a meta-progressão (Seção 15) e guarda as
 **Diferenças em relação ao DD v2.** O rank ninja não aparece na entrada, porque todo personagem é Genin no MVP; a saga aparece no texto do fim da run, e não num campo próprio. O DD v2 pedia um snapshot da Ficha inteira; o MVP mostra o resumo acima, e a Ficha completa de uma run passada fica para depois.
 
 **Fica de fora do MVP (spec §1):** rank ninja na entrada (F2) e a Ficha completa de runs passadas.
+
+---
+
+## 17. Modo Online (Futuro)
+
+**Estado:** Futuro (F2/F3)
+
+O modo online continua fora do jogo: o MVP é single player e 100% local no navegador (decisão do usuário, spec §1). No roadmap ele é a **F4** (Seção 21); a linha de estado o agrupa com as outras visões de fase futura. O que o MVP já entrega é o requisito de arquitetura que o DD v2 pedia desde o início: a regra do jogo separada da apresentação e todo sorteio reproduzível por semente.
+
+### O que o online deve ter (visão do DD v2)
+
+- PvP 1x1 ou em equipe, reaproveitando a mesma lógica de combate do single player.
+- **Servidor autoritativo:** o servidor valida as ações, não o cliente.
+- Matchmaking simples no começo, evoluindo para ranking.
+- **Cronômetro por turno** só no PvP: quem não age no tempo perde o turno (ou a partida, por inatividade). Não existe no single player.
+- Persistência de personagem e de meta-progressão em nuvem.
+
+### O que o MVP já deixou pronto
+
+- **Motor puro.** `src/game/` não importa Phaser nem DOM e não usa `Math.random` nem `Date.now`. A ação de batalha passa por `applyAction(state, action, rng)` em `src/game/combat/battle.ts`, que devolve o novo estado e a lista de eventos; um servidor pode rodar a mesma função para validar uma jogada.
+- **RNG com semente.** O sorteio é o `Rng` de `src/game/Rng.ts` (algoritmo mulberry32), com estado serializável; a semente da run fica salva. Mesma semente e mesmas ações dão a mesma luta, o que viabiliza replay e validação no servidor.
+- **Batalha como lista de combatentes** (Seção 9), e não como "jogador contra inimigo", o que já comporta lados com mais de um combatente.
+- **Ação inválida lança erro tipado** (`RuleError` em `src/game/errors.ts`, com um `code` estável como `onlyKai`), em vez de ser corrigida em silêncio: o mesmo contrato serve para recusar uma jogada vinda da rede.
+
+**Fica de fora do MVP (spec §1):** online, PvP, servidor, matchmaking, ranking e cronômetro de turno (decisão do usuário: jogo 100% local).
+
+---
+
+## 18. Arquitetura Técnica
+
+**Estado:** Implementado (MVP)
+
+### Engine: Phaser 3 na batalha, HTML/CSS no resto
+
+O DD v2 propôs Phaser 3 para a cena de batalha e HTML/CSS sobre o canvas para as telas cheias de texto, e o MVP seguiu a proposta. Só a arena da batalha é desenhada em Phaser (`src/scenes/BattleScene.ts`, iniciada por `src/scenes/createGame.ts`); menu, criação, mapa, Preparação, Ficha, Enciclopédia, Títulos, Histórico e até os painéis e a barra de ações da batalha são DOM, uma tela por arquivo em `src/ui-dom/screens/`. O `phaser` fica fixo na linha 3.88 (`~3.88.2` em `package.json`).
+
+### Linguagem e ferramentas
+
+TypeScript em modo strict, Vite como bundler e npm como gerenciador de pacotes (o package se chama `ninja-x-rogue`). Vitest roda os testes, Zod valida os dados e o tsx executa o simulador e o verificador de documentos no Node. O `npm run build` checa os tipos e gera um `dist/` estático; o layout é só desktop (1024 px ou mais).
+
+### Camadas
+
+| Camada | Onde | Papel |
+|---|---|---|
+| Dados | `src/data/` | Clãs, jutsus, efeitos, itens, inimigos, saga, pontos da história e títulos. Adicionar conteúdo é adicionar dados |
+| Constantes | `src/game/Balance.ts` | Todo número de balanceamento, num lugar só (`BALANCE`) |
+| Motor | `src/game/` | Regras puras: atributos e fórmulas, combate, efeitos, progressão, run, meta, save e simulador |
+| Estado da aplicação | `src/store/GameStore.ts` | A única fonte da verdade da interface: recebe as ações, chama o motor, guarda o estado, grava o save e publica os eventos |
+| Apresentação | `src/ui-dom/` e `src/scenes/` | Telas DOM e a arena Phaser; só leem o estado e animam os eventos |
+| Textos | `src/i18n/pt-BR.ts` | Toda frase de interface por chave (`t('battle.grade')`), mesmo com um idioma só |
+
+**Fluxo de dados.** A interface chama o `GameStore`; ele chama o motor (`battleAction` em `src/game/run/runManager.ts`, que usa `applyAction`), recebe `{ state, events }`, guarda o estado, grava o save quando é ponto de save e entrega os eventos à arena. A arena enfileira as animações (`AnimationQueue` em `src/scenes/animationQueue.ts`) e a entrada fica travada até a fila terminar; a fila libera a entrada mesmo se uma animação falhar. Qualquer exceção no render, no motor ou no animador leva à tela de erro com o botão Recarregar (`src/ui-dom/screens/ErrorScreen.ts`, `docs/ANALISE.md` §5).
+
+**Eventos.** Tudo o que acontece numa luta vira um evento (`GameEvent` em `src/game/events.ts`: dano, esquiva, efeito aplicado, transformação, inimigo derrotado, subida de nível, jutsu aprendido). Os mesmos eventos alimentam a animação, o log de batalha (`src/ui-dom/view/log.ts`) e o rastreador de estatísticas (`src/game/meta/stats.ts`), que por sua vez alimenta títulos e Histórico. O motor não conhece nenhum deles.
+
+### Persistência e salvamento
+
+- **Duas chaves no `localStorage`:** `nxr.run.v1` (a run em andamento) e `nxr.meta.v1` (Enciclopédia, títulos, estatísticas vitalícias e Histórico), em `src/game/save/save.ts`.
+- **Versão e migração.** Todo save tem `version` e passa pelas migrações em ordem (`RUN_MIGRATIONS` e `META_MIGRATIONS`) antes de ser validado com Zod.
+- **Momentos de save:** fim de cada encontro, Acampamento e cada compra ou troca na Preparação. Dentro da batalha não há save: recarregar volta ao início do encontro, com a mesma semente (`ASSUMIDO` da spec, contra save-scum).
+- **Permadeath.** Morte, vitória ou abandono apagam a run e gravam a meta uma vez só (`recordRunEnd` é idempotente). Se a gravação da meta falhar, a run encerrada fica salva para o próximo boot finalizá-la (`docs/ANALISE.md` §5).
+- **Quarentena.** `loadRun` e `loadMeta` nunca lançam: um save inválido é copiado para `nxr.run.corrupt.<timestamp>` ou `nxr.meta.corrupt.<timestamp>`, o jogador é avisado e o jogo segue com estado limpo.
+
+### Aleatoriedade com semente
+
+Todo sorteio (variação de dano, crítico, esquiva, ordem de turno, inimigos e elites da run, estoque da loja, escolha 1-de-3) usa o `Rng` com semente guardada na run. Isso dá testes determinísticos, reprodução de bugs e, no futuro, replays e validação em servidor (Seção 17).
+
+### Simulador de balanceamento headless
+
+O motor roda sem interface, e o simulador (`src/game/sim/`, executado por `tools/simulate.ts`) joga runs completas da Saga da Onda com um robô em 8 builds. `npm run sim` joga 3000 runs por build e imprime a tabela do Apêndice A.5; `npm run sim:check` joga 1000 e falha se uma build sair da **sua faixa** (Apêndice A.6). Toda mudança de constante ou de conteúdo deve passar por ele.
+
+### Validação de dados, i18n e verificação de documentos
+
+- Os dados de `src/data/` são validados com Zod no boot (`assertGameData` em `src/data/validate.ts`, chamado pelo `GameStore`); um erro de digitação num requisito ou num id de efeito leva à tela de erro com a mensagem, em vez de um jogo quebrado.
+- Os textos da interface vivem em chaves de tradução (`src/i18n/pt-BR.ts`).
+- Os documentos do projeto são conferidos contra o código por `npm run docs:check` (`tools/docs-check.ts`): caminhos citados têm de existir, e cada número de balanceamento marcado tem de bater com o `BALANCE`.
+
+### Estratégia de assets
+
+Placeholders: formas coloridas com o nome escrito em cima. Sprites originais ou de fontes livres ficam para depois. **Regra de ouro:** nunca usar arte oficial de Naruto; nomes e descrições seguem a lore, a representação visual é sempre original. Projeto de fã, sem monetização.
+
+### Testes
+
+O Vitest cobre o motor (`tests/`: fórmulas, dano, efeitos, batalha, IA, desbloqueio, progressão, run, loja, meta, estatísticas, save, dados, RNG e simulador) e a interface sobre happy-dom (`tests/ui/`: telas, store, atalhos de teclado, fila de animação, robustez e uma run de ponta a ponta). O simulador é o teste de regressão do balanceamento, e `tests/sim-bands.test.ts` garante que nenhuma faixa de build é mais estreita que a meta de design.
+
+**Fica de fora do MVP (spec §1):** sprites, áudio, layout abaixo de 1024 px, empacotamento para desktop ou mobile e persistência em nuvem.
+
+---
+
+## 19. Estrutura Sugerida do Projeto
+
+**Estado:** Implementado (MVP)
+
+O DD v2 sugeria uma cena Phaser por tela e um arquivo por "sistema" (`CombatSystem.ts`, `EconomySystem.ts`...). A estrutura real é outra: Phaser só na batalha, telas em DOM, e o motor dividido por assunto em pastas. Esta é a árvore dos arquivos versionados em `src/`, `tests/`, `tools/` e `docs/` (`git ls-files`):
+
+```
+src/
+  main.ts                 entrada: cria o GameStore, a App DOM e o jogo Phaser
+  styles.css
+  game/                   motor puro (sem Phaser, DOM, Math.random, Date.now)
+    Balance.ts            todas as constantes (BALANCE)
+    Rng.ts                RNG com semente (mulberry32)
+    types.ts              tipos compartilhados (atributos, graus, pontos da história)
+    formulas.ts           HP, chakra, regeneração, redução, esquiva, crítico, XP, chances
+    attributes.ts         atributo que escala cada categoria de jutsu
+    events.ts             GameEvent
+    errors.ts             RuleError (erro de regra com código estável)
+    combat/               battle.ts, damage.ts, cost.ts, ai.ts, enemyFactory.ts, types.ts
+    effects/              EffectSystem.ts (efeitos, transformação, cargas)
+    progression/          character.ts, unlock.ts, mastery.ts, loadout.ts, presets.ts
+    run/                  runManager.ts, battleSetup.ts, shop.ts, types.ts
+    meta/                 meta.ts (meta, títulos, Histórico, Enciclopédia), stats.ts
+    save/                 save.ts (versões, migrações, quarentena)
+    sim/                  bot.ts, builds.ts, report.ts
+  data/                   clans.ts, jutsus.ts, effects.ts, items.ts, enemies.ts,
+                          saga.ts, story.ts, titles.ts, validate.ts (Zod)
+  store/GameStore.ts      fonte da verdade da interface
+  scenes/                 BootScene.ts, BattleScene.ts, createGame.ts, animationQueue.ts
+  ui-dom/                 App.ts, dom.ts, types.ts
+    screens/              Menu, Create, Map, Prep, Battle, Result, RunEnd, Sheet,
+                          Encyclopedia, Titles, History, Error (+ index.ts)
+    components/           allocation.ts, radar.ts, runHeader.ts, swap.ts, tabBar.ts
+    view/                 derived.ts, format.ts, log.ts (lógica de tela testável)
+  i18n/pt-BR.ts
+tests/                    testes do motor (*.test.ts) e helpers.ts
+  ui/                     testes da interface (happy-dom), memoryStore.ts, appHelpers.ts
+tools/
+  simulate.ts             npm run sim / sim:check
+  docs-lib.ts, docs-specs.ts, docs-check.ts   npm run docs:check
+docs/
+  DESIGN.md               este documento (DD v3)
+  ANALISE.md              análise do DD v2, correções C1–C15, suposições e decisões
+  balance-log.md          registro da calibração e das faixas por build
+  curso/                  curso de construção do jogo (Alfa 0.1 a 1.0)
+  referencia/             DD v2
+  superpowers/            spec do MVP e os três planos de implementação
+```
+
+Na raiz ficam `index.html`, `package.json`, `tsconfig.json`, `vite.config.ts`, `README.md` e `.gitignore`. Não há pasta de assets: o MVP não tem arte.
+
+**Por que essa estrutura e não a do DD v2.** Uma pasta por assunto do motor (`combat/`, `run/`, `meta/`...) mantém juntos os arquivos que mudam juntos, e a regra "o motor não importa nada de fora de `src/game/` e `src/data/`" fica fácil de conferir. As telas do DD v2 que eram cenas Phaser (`MainMenuScene`, `ShopScene`, `NinjaSheetScene`) viraram telas DOM; a loja não tem tela própria e vive na Preparação (`src/ui-dom/screens/PrepScreen.ts`). Os "sistemas" do DD v2 se espalharam assim:
+
+| DD v2 | No código |
+|---|---|
+| `CombatSystem`, `EffectSystem` | `src/game/combat/battle.ts`, `src/game/effects/EffectSystem.ts` |
+| `Character`, `AttributeSystem` | `src/game/progression/character.ts`, `src/game/formulas.ts`, `src/game/attributes.ts` |
+| `JutsuUnlockSystem`, `JutsuLoadout`, `JutsuMastery` | `src/game/progression/unlock.ts`, `src/game/progression/loadout.ts`, `src/game/progression/mastery.ts` |
+| `EconomySystem`, `EquipmentSystem` | `src/game/run/shop.ts` e `finishEncounter` em `src/game/run/runManager.ts` |
+| `SagaManager`, `RunManager` | `src/data/saga.ts`, `src/game/run/runManager.ts` |
+| `RunHistoryLog`, `RunStatsTracker`, `TitleSystem` | `src/game/meta/meta.ts`, `src/game/meta/stats.ts` |
+| `NinjaRankSystem`, `BestiarySystem` | não existem (promoção e Livro Bingo são F2) |
+
+**Fica de fora do MVP (spec §1):** pastas de assets e sprites, cenas de Livro Bingo e de equipamento com silhueta.
+
+---
+
+## 20. Visão de Longo Prazo
+
+**Estado:** Futuro (F2/F3)
+
+A ambição é crescer aos poucos até cobrir a lore de Naruto, e possivelmente Boruto, acrescentando jutsus, mecânicas e sagas de forma gradual. Nada disso faz parte das fases F0 a F4; esta seção existe para que as decisões de hoje (modelo de dados, motor de combate) não bloqueiem o que vem depois.
+
+### Princípio: estabilidade antes de expansão
+
+Cada camada nova só entra quando a anterior está sólida e testada. Adicionar conteúdo (jutsu, saga, inimigo) tem de ser barato; adicionar **mecânica** nova, uma de cada vez. O MVP aplicou o princípio a si mesmo: fechou F0 e F1A inteiros, só uma parte escolhida da F1B, e pôs o simulador e o `docs:check` como travas contra regressão.
+
+### Backlog de longo prazo (sem prazo)
+
+| Ideia | O que a torna possível | Situação no MVP |
+|---|---|---|
+| **Infusão elemental** (Rasengan + Vento → Rasen Shuriken) | Elemento opcional no jutsu e pré-requisito de jutsu (Seções 7 e 8) | O Rasen Shuriken já está nos dados com pré-requisito Rasengan; o mapa de infusões não existe |
+| **Invocações** | Batalha como lista de combatentes e efeitos com duração (Seções 9 e 10) | Kuchiyose no Jutsu só na Enciclopédia |
+| **Modo Sábio** e outras formas | Transformação genérica com manutenção por turno (Seção 10) | A transformação já existe (Sharingan) |
+| **Kekkei Genkai e naturezas combinadas** | Elemento como dado e roda elemental extensível (Seção 7) | Roda com cinco elementos; Raio oculto até a F2 |
+| **Dojutsu evoluídos** (Mangekyou, Rinnegan) | Mecânica de clã com estágios, como o tomoe do Sharingan | O contador de turnos do tomoe já é salvo |
+| **Jinchuuriki e modos de Bijuu** | Efeitos sustentados e combatentes especiais | — |
+| **Fuinjutsu avançado** | Categoria Fuinjutsu atrelada à Inteligência | Kongou Fuusa jogável; Hakke no Fuuin Shiki (F3) nos dados |
+| **Ranks avançados** (ANBU, Kage) | Rank e reputação como dado (Seção 4) | Todo personagem é Genin no MVP |
+| **Shippuden e Boruto** | Sagas como dado e saga mínima por jutsu (Seções 8 e 12) | Os pontos da história até a Perseguição a Itachi já estão em `src/data/story.ts` |
+| **Títulos de evento** | Títulos como dado, com marca de oculto (Seção 14) | Formato pronto em `src/data/titles.ts` |
+
+**Fica de fora do MVP (spec §1):** todo o backlog acima.
+
+---
+
+## 21. Roadmap por Fases
+
+**Estado:** Parcial (MVP)
+
+O roadmap do DD v2 continua valendo, com a F0, a F1A e parte da F1B entregues pelo MVP. A construção seguiu três planos de implementação (`docs/superpowers/plans/`): o motor (Plano 1), a interface (Plano 2) e documentos e fechamento (Plano 3); o curso em `docs/curso/` conta essa construção versão a versão, da Alfa 0.1 à 1.0.
+
+### Fase 0 — Fatia vertical [F0] — entregue
+
+1. Ambiente (Phaser 3, Vite, TypeScript), RNG com semente e arquivo de constantes.
+2. Atributos, XP e níveis (Apêndice A.1).
+3. Combate 1x1 completo (Seção 9), efeitos básicos e log de batalha.
+4. Criação de personagem e jutsus gerais de F0 (Apêndice B).
+5. Loja mínima e save da run.
+6. Simulador headless com as metas do Apêndice A.
+
+O DD v2 previa só um clã e os encontros até Zabuza na F0; o MVP foi direto à saga completa com os três caminhos.
+
+### Fase 1A — Núcleo da Saga da Onda [F1A] — entregue
+
+7. Saga completa (26 encontros), Haku, Acampamento, Uchiha e Uzumaki completos, Sem clã compensado.
+8. Reputação, ryo, loja e equipamento (Arma e Armadura), 4 slots e maestria.
+9. Menu principal e Enciclopédia de Jutsus.
+
+### Fase 1B — Camadas adicionais [F1B] — parcial
+
+10. **Entregue:** Ficha do Ninja (Perfil, Atributos, Jutsus, Equipamento), Títulos com buff, Histórico de Runs, Pergaminho Raro, Henge e Doryuuheki, escolha 1-de-3 ao subir de nível (sem jutsu, C12).
+11. **Pendente:** aba Registro de Batalha, tela de equipamento com silhueta e eventos entre encontros (loja ambulante, treino, descanso). A escolha 1-de-3 ainda não passou por playtest humano.
+
+### Fase 2
+
+- Saga do Exame Chunin com a **missão de promoção a Chunin** (1000 de reputação), 6 slots, segunda afinidade, Raio e Chidori; Orochimaru na Floresta da Morte; Gaara na Invasão de Konoha.
+- Clãs Hyuuga, Nara, Akimichi e Aburame; Sharingan tomoe 2 e 3.
+- Meta-progressão completa (Pontos de Legado, desbloqueio de clãs, cosméticos), novos slots de equipamento, Livro Bingo, rival, jutsus combinados; títulos Colecionador e Novo Chunin visíveis (C14).
+- Antes de abrir a F2: rever a distância entre builds que o MVP deixou (Apêndice A.6 e Apêndice D).
+
+### Fase 3
+
+- Busca por Tsunade (Rasengan, Kuchiyose), Recuperação do Sasuke, promoção a Jounin (8 slots), elites e equipamentos de grau mais alto, Hakke no Fuuin Shiki (C15) e balanceamento por simulação dos graus A e S.
+
+### Fase 4 — Online
+
+- Modo Infinito, backend multiplayer, matchmaking e ranking, draft de clã no PvP, replays assíncronos pela semente da run (Seção 17).
+
+### Fases futuras (5+)
+
+Infusão elemental, invocações, Modo Sábio, formas avançadas, Shippuden e Boruto, uma mecânica de cada vez (Seção 20).
+
+**Fica de fora do MVP (spec §1):** tudo da F1B pendente, F2, F3, F4 e fases futuras.
+
+---
+
+> *"A verdadeira força não está apenas no poder dos jutsus, mas na vontade de proteger aqueles que amamos."*
+
+---
+
+## Apêndice A — Tabelas de Balanceamento e Simulação
+
+Os números deste apêndice vêm de `src/game/Balance.ts` e do simulador (`src/game/sim/`, `tools/simulate.ts`); a história da calibração está em `docs/balance-log.md`.
+
+### A.1 Curva de XP e níveis
+
+Do nível L para o L+1 são `24 + 12·L` de XP (base 24 <!-- fact: BALANCE.xp.toNextBase=24 -->, 12 <!-- fact: BALANCE.xp.toNextPerLevel=12 --> por nível; `xpToNext` em `src/game/formulas.ts`). Um comum de nível de história N dá `8 + 4·N` (8 <!-- fact: BALANCE.xp.commonBase=8 --> e 4 <!-- fact: BALANCE.xp.commonPerLevel=4 -->; `xpForCommon`); a elite dá ×1,6 <!-- fact: BALANCE.xp.eliteMult=1.6 --> do comum, arredondado; o chefe de grau C ou B dá ×4 <!-- fact: BALANCE.xp.bossMult.C=4 --> do comum do mesmo nível. Três comuns valem um nível.
+
+| Nível | XP para o próximo | XP acumulado | XP de um comum desse nível de história |
+|---|---|---|---|
+| 1 | 36 | 0 | 12 |
+| 2 | 48 | 36 | 16 |
+| 3 | 60 | 84 | 20 |
+| 4 | 72 | 144 | 24 |
+| 5 | 84 | 216 | 28 (Zabuza: 112) |
+| 6 | 96 | 300 | 32 |
+| 7 | 108 | 396 | 36 |
+| 8 | 120 | 504 | 40 |
+| 9 | 132 | 624 | 44 |
+| 10 | 144 | 756 | 48 (Haku: 192) |
+| 11 | 156 | 900 | — |
+
+No ritmo esperado (só comuns, sem elites), o jogador entra em Zabuza no nível 5 e termina a saga no nível 11.
+
+### A.2 Recompensas por grau
+
+| Grau | Ryo | Reputação |
+|---|---|---|
+| D (comum) | 30 <!-- fact: BALANCE.rewards.D.ryo=30 --> | 22 <!-- fact: BALANCE.rewards.D.rep=22 --> |
+| D+ (elite) | 50 | 38 |
+| C (Zabuza) | 200 <!-- fact: BALANCE.rewards.C.ryo=200 --> | 160 <!-- fact: BALANCE.rewards.C.rep=160 --> |
+| B (Haku) | 300 <!-- fact: BALANCE.rewards.B.ryo=300 --> | 240 <!-- fact: BALANCE.rewards.B.rep=240 --> |
+| A (F2) | 500 <!-- fact: BALANCE.rewards.A.ryo=500 --> | 400 <!-- fact: BALANCE.rewards.A.rep=400 --> |
+
+A saga sem elites rende 1220 ryo e 928 de reputação; com as 3 elites, até 1280 ryo e 976 de reputação (Seções 4 e 11).
+
+### A.3 Graus de inimigo
+
+Pontos de atributo do inimigo = `round(P(N) × razão do grau)`, com `P(N) = 50 + 7·(N − 1)`; o HP máximo leva o multiplicador de HP e os golpes levam o multiplicador de dano (Seção 9, `src/game/combat/enemyFactory.ts`).
+
+| Grau | Razão de pontos | HP | Dano | Inimigos no MVP | Origem do valor |
+|---|---|---|---|---|---|
+| D | 0,7 | ×0,8 <!-- fact: BALANCE.enemyGrades.D.hpMult=0.8 --> | ×0,65 <!-- fact: BALANCE.enemyGrades.D.damageMult=0.65 --> | Bandido, Ninja Renegado, Mercenário da Névoa | DD v2; dano calibrado de 0,6 para 0,65 (iteração 1) |
+| D+ | 0,9 | ×1,0 | ×0,8 | os três Veteranos (elite) | spec (C5); não medido em separado |
+| C | 1,1 | ×2,1 <!-- fact: BALANCE.enemyGrades.C.hpMult=2.1 --> | ×0,81 <!-- fact: BALANCE.enemyGrades.C.damageMult=0.81 --> | Zabuza Momochi | calibrado: HP 1,3 → 2,1 e dano 0,72 → 0,81 (iterações 2 e 3) |
+| B | 1,2 | ×1,7 <!-- fact: BALANCE.enemyGrades.B.hpMult=1.7 --> | ×0,8 <!-- fact: BALANCE.enemyGrades.B.damageMult=0.8 --> | Haku | C6 pedia 1,5; calibrado para 1,7 (iteração 4) |
+
+Os graus A e S estão no `BALANCE` como estimativa do DD v2, sem simulação (Seção 9).
+
+### A.4 Builds do simulador
+
+O robô distribui cada ponto no atributo mais atrasado em relação aos pesos da build (`src/game/sim/builds.ts`). As seis builds focadas entram nas metas; Semi-equilibrado e Equilibrado são só referência.
+
+| Build | Pesos dos pontos livres | Afinidade | Focada |
+|---|---|---|---|
+| Ninjutsu (Uchiha, Uzumaki, Sem clã) | Nin 40% · HP 20% · Def 15% · Vel 15% · Crit 5% · Int 5% | Fogo no Uchiha; Vento nos outros (`ASSUMIDO`) | sim |
+| Taijutsu (Uchiha, Uzumaki, Sem clã) | Tai 40% · HP 20% · Def 15% · Vel 15% · Crit 5% · Int 5% | idem | sim |
+| Semi-equilibrado / Uzumaki | Nin 25% · Tai 20% · HP 15% · Def 15% · Vel 15% · Int 10% (`ASSUMIDO`) | Vento | não |
+| Equilibrado / Sem clã | 12,5% em cada atributo | Vento | não |
+
+**O robô** (`src/game/sim/bot.ts`) é simples de propósito: equipa os 4 jutsus de dano mais fortes e ignora buffs e controle; usa o kit médico abaixo de 35% do HP, a pílula de chakra nos chefes abaixo de 30% do chakra e defende abaixo de 25% do HP sem kit, mas nunca em dois turnos seguidos; medita sem chakra para um jutsu; compra na ordem estrita do DD v2 A.5 (colete ninja, kunai, kits, pílula, katana só no Taijutsu, colete reforçado) e, sem ryo para o próximo item, não compra nada; nunca escolhe elite e nunca compra Pergaminho Raro; na escolha 1-de-3, prefere kit, pílula, treino, ryo e reforço, nessa ordem.
+
+### A.5 Resultado final do simulador (3000 runs por build)
+
+Saída de `npm run sim` registrada em `docs/balance-log.md` ("Resultado final (3000 runs/build)"):
+
+| Build | Runs | Chega a Zabuza | Vence Zabuza | Completa | Haku dado Zabuza | Rodadas Z/H/comum | HP fim comum | Maestria do jutsu principal |
+|---|---|---|---|---|---|---|---|---|
+| Ninjutsu / Uchiha | 3000 | 100% | 41% | 31% | 75% | 10.4 / 9.7 / 2.6 | 82% | +2.3 |
+| Ninjutsu / Uzumaki | 3000 | 97% | 73% | 69% | 95% | 11.3 / 9.5 / 2.7 | 80% | +3.1 |
+| Ninjutsu / Sem clã | 3000 | 98% | 49% | 44% | 91% | 11.3 / 8.9 / 2.8 | 77% | +3.6 |
+| Taijutsu / Uchiha | 3000 | 100% | 51% | 38% | 75% | 9.6 / 10.0 / 2.5 | 84% | +3.5 |
+| Taijutsu / Uzumaki | 3000 | 99% | 73% | 69% | 94% | 11.3 / 10.4 / 3.0 | 78% | +4.4 |
+| Taijutsu / Sem clã | 3000 | 96% | 45% | 38% | 83% | 11.3 / 10.8 / 3.0 | 74% | +4.0 |
+| Semi-equilibrado / Uzumaki | 3000 | 92% | 45% | 35% | 78% | 12.1 / 12.7 / 3.5 | 69% | +3.4 |
+| Equilibrado / Sem clã | 3000 | 77% | 0% | 0% | 0% | 9.8 / 0.0 / 4.1 | 49% | +3.6 |
+
+Tempo: 141,1 s (3000 runs × 8 builds), acima da meta de 30 s da spec §12; o `npm run sim:check` (1000 runs por build) leva de 33 a 45 s. "Haku dado Zabuza" é a fração de quem venceu Zabuza que também venceu Haku; a maestria é a do jutsu mais usado da run.
+
+**Como ler.** Comparado ao DD v2 A.5, os chefes ficaram mais longos (cerca de 10 rodadas, contra 7 a 8) porque o HP dos graus C e B subiu, e Haku passou a ser mais difícil que Zabuza para as builds Uchiha (75% de quem vence Zabuza), como a C6 pedia. Três leituras continuam valendo: o Uzumaki é a build mais forte contra chefes (73% vencem Zabuza e 94–95% deles vencem Haku), o Uchiha a mais fraca (41% e 51% vencem Zabuza), e builds espalhadas não passam de Zabuza (Equilibrado 0%), o que motivou os presets da criação (C9).
+
+### A.6 Metas de design × faixa da build
+
+As **metas de design** são as da spec §12, em `TARGETS` de `src/game/sim/report.ts`, aplicadas às builds focadas:
+
+| Métrica | Meta de design |
+|---|---|
+| HP ao fim de um comum | 75–85% |
+| Rodadas por comum | 2–4 |
+| Chega a Zabuza | 95–100% |
+| Vence Zabuza | 45–75% |
+| Completa a saga | 35–70% |
+| Haku dado Zabuza | 70–85% |
+| Maestria média do jutsu principal | +2 a +4 |
+
+Depois de 4 iterações de calibração, 8 métricas seguiam fora, porque a distância entre a build mais fraca contra chefes (Uchiha) e a mais forte (Uzumaki) é maior que a largura das faixas, e os multiplicadores de grau movem todas as builds juntas. O usuário escolheu **faixas por build** (decisão de 2026-10-12, `docs/balance-log.md`): cada build que mede fora da meta ganha uma faixa própria em `BUILD_BANDS`, nunca mais estreita que a meta. O `npm run sim:check` falha se uma build sair da sua faixa; a distância até a meta de design continua impressa (`designGaps`), só como informação. Nenhum valor do `BALANCE` mudou nessa decisão.
+
+| Build | Métrica | Medido (1000 runs) | Meta de design | Faixa da build |
+|---|---|---|---|---|
+| Ninjutsu / Uchiha | vence Zabuza | 44,7% | 45–75% | 40–75% |
+| Ninjutsu / Uchiha | completa a saga | 33,8% | 35–70% | 30–70% |
+| Ninjutsu / Uzumaki | Haku dado Zabuza | 95,4% | 70–85% | 70–97% |
+| Ninjutsu / Sem clã | Haku dado Zabuza | 92,4% | 70–85% | 70–95% |
+| Taijutsu / Uzumaki | Haku dado Zabuza | 93,9% | 70–85% | 70–97% |
+| Taijutsu / Uzumaki | maestria do jutsu principal | +4,45 | +2 a +4 | +2 a +4,6 |
+| Taijutsu / Sem clã | HP no fim dos comuns | 74,5% | 75–85% | 72–85% |
+| Taijutsu / Sem clã | maestria do jutsu principal | +4,04 | +2 a +4 | +2 a +4,2 |
+
+Com 3000 runs, todas as builds focadas ficam dentro da sua faixa; Ninjutsu / Uchiha fica perto do piso (vence Zabuza 41%, completa 31%). As faixas protegem contra **regressão**; elas não dizem que a distância entre builds está resolvida (Apêndice D).
+
+### A.7 O que o simulador não mede
+
+- **A escolha 1-de-3 do robô é fixa:** ele pega sempre kit ou pílula primeiro. Por isso as builds com mais acesso a cura (Uzumaki, Sem clã) ficam mais fortes contra chefes no simulador; um jogador que escolhe ryo ou treino joga outra economia. Tirar os consumíveis da escolha 1-de-3, ou reduzir a cura do kit de 40% para 25–30%, é uma das correções de design em aberto.
+- **O jogador humano joga melhor ou pior que o robô.** O robô não usa buffs (Bunshin, Kawarimi, Kage Bunshin, Doryuuheki, Henge), controle (Kongou Fuusa, Genjutsu: Sharingan), Pergaminho de Reforço nem o Sharingan como transformação, não escolhe elite e não compra Pergaminho Raro. Um humano que usa essas ferramentas deve se sair melhor; um que espalha pontos ou gasta mal o ryo, pior.
+- **Não medidos em separado:** o grau D+ das elites, os títulos (o robô joga sem título), o Pergaminho Raro e o tempo real de uma run.
+- **Não simulados de jeito nenhum:** os graus A e S e todo o conteúdo de F2 em diante.
+
+---
+
+## Apêndice B — Catálogo de Jutsus
+
+O catálogo é o de `src/data/jutsus.ts`, lido linha a linha; onde o DD v2 Apêndice B diverge, vale o código (as divergências que mudam regra são C3, C7 e C15). São 43 jutsus de jogador: 14 jogáveis no MVP (fases F0, F1A e F1B) e 29 de fases futuras, que existem só como dados para a Enciclopédia, sem efeito mecânico. Os efeitos dos jogáveis estão na Seção 10 e no campo `description` de cada entrada.
+
+**Legenda:** requisitos são sempre de **atributo base** (Seção 3); "(+ jutsu)" é pré-requisito de jutsu já aprendido; "Herança" é a regra da Seção 8 (o jutsu básico do clã pode ser aprendido desde o início); "Chakra" é o custo base, antes dos descontos de maestria, clã e título; "—" no Poder é jutsu sem dano direto; categoria seguida de elemento indica a natureza de chakra, e sem elemento o jutsu é neutro.
+
+### B.1 Jogáveis no MVP
+
+| `id` | Jutsu | Categoria / elemento | Clã | Requisitos | Saga mínima | Grau | Chakra | Poder | Fase |
+|---|---|---|---|---|---|---|---|---|---|
+| `henge` | Henge no Jutsu | Ninjutsu | Geral | Nin 5 | Início | D | 6 | — | F1B |
+| `bunshin` | Bunshin no Jutsu | Ninjutsu | Geral | Nin 5 | Início | D | 8 | — | F1A |
+| `kawarimi` | Kawarimi no Jutsu | Ninjutsu | Geral | Vel 8 | Início | D | 10 | — | F1A |
+| `bola_de_fogo` | Bola de Fogo Básica | Ninjutsu / Fogo | Geral | Nin 6 | Início | D | 8 | 26 | F0 |
+| `sennen_goroshi` | Sennen Goroshi | Taijutsu | Geral | Tai 6 | Início | D | 8 | 26 | F0 |
+| `investida_ninja` | Investida Ninja | Taijutsu | Geral | Tai 12 | Início | C | 14 | 40 | F0 |
+| `kai` | Kai | Genjutsu | Geral | Gen 8 | Início | D | 6 | — | F1A |
+| `daitoppa` | Fuuton: Daitoppa | Ninjutsu / Vento | Geral | Nin 12 | Saga da Onda | C | 14 | 40 | F1A |
+| `doryuuheki` | Doton: Doryuuheki | Ninjutsu / Terra | Geral | Nin 12 | Saga da Onda | C | 14 | — | F1B |
+| `suiryuudan` | Suiton: Suiryuudan no Jutsu | Ninjutsu / Água | Geral | Nin 22 | Saga da Onda (após Zabuza) | B | 22 | 60 | F1A |
+| `kage_bunshin` | Kage Bunshin no Jutsu | Ninjutsu | Geral | Nin 20 | Saga da Onda | B | 24 | — | F1A |
+| `kongou_fuusa` | Kongou Fuusa (Herança) | Fuinjutsu | Uzumaki | Int 14 + Nin 8 | Início | C | 16 | — | F1A |
+| `goukakyuu` | Katon: Goukakyuu no Jutsu (Herança) | Ninjutsu / Fogo | Uchiha | Nin 12 | Início | C | 14 | 40 | F1A |
+| `genjutsu_sharingan` | Genjutsu: Sharingan (Herança) | Genjutsu | Uchiha | Gen 10 | Início | C | 12 | — | F1A |
+
+### B.2 Fases futuras (só Enciclopédia)
+
+| `id` | Jutsu | Categoria / elemento | Clã | Requisitos | Saga mínima | Grau | Chakra | Poder | Fase |
+|---|---|---|---|---|---|---|---|---|---|
+| `konoha_senpuu` | Konoha Senpuu | Taijutsu | Geral | Tai 14 | Exame Chunin (início) | C | 14 | 40 | F2 |
+| `jubaku_satsu` | Magen: Jubaku Satsu | Genjutsu | Geral | Gen 14 | Exame Chunin (início) | C | 16 | — | F2 |
+| `nehan_shouja` | Magen: Nehan Shouja no Jutsu | Genjutsu | Geral | Gen 20 | Exame Chunin (mês de treino) | B | 22 | — | F2 |
+| `gogyou_fuuin` | Fuuinjutsu: Gogyou Fuuin | Fuinjutsu | Geral | Int 22 | Exame Chunin (Floresta da Morte) | B | 22 | — | F2 |
+| `naruto_rendan` | Uzumaki Naruto Rendan | Taijutsu | Geral | Tai 20 + Nin 12 (+ Kage Bunshin no Jutsu) | Exame Chunin (Preliminares) | B | 24 | 70 | F2 |
+| `shishi_rendan` | Shishi Rendan | Taijutsu | Geral | Tai 22 + Vel 14 | Exame Chunin (Finais) | B | 22 | 65 | F2 |
+| `chidori` | Chidori | Ninjutsu / Raio | Geral | Nin 30 + Vel 18 | Exame Chunin (mês de treino) | A | 38 | 100 | F2 |
+| `rasengan` | Rasengan | Ninjutsu | Geral | Nin 32 + Int 15 (+ Kage Bunshin no Jutsu) | Busca por Tsunade | A | 40 | 100 | F3 |
+| `kuchiyose` | Kuchiyose no Jutsu | Ninjutsu | Geral | Nin 25 + Int 20 | Busca por Tsunade | A | 40 | — | Futuro |
+| `rasen_shuriken` | Fuuton: Rasen Shuriken | Ninjutsu / Vento | Geral | Nin 45 + Int 30 (+ Rasengan) | Shippuden | S | 70 | 160 | Futuro |
+| `omote_renge` | Omote Renge | Taijutsu | Geral | Tai 40 + Vel 30 | Exame Chunin (Preliminares) | S | 60 | 150 | Futuro |
+| `hakke_no_fuuin_shiki` | Hakke no Fuuin Shiki | Fuinjutsu | Uzumaki | Int 30 + Nin 20 | Shippuden | A | 36 | — | F3 |
+| `ryuuka` | Katon: Ryuuka no Jutsu | Ninjutsu / Fogo | Uchiha | Nin 24 | Exame Chunin (mês de treino) | B | 24 | 65 | F2 |
+| `amaterasu` | Amaterasu | Ninjutsu | Uchiha | Gen 40 + Nin 25 | Perseguição a Itachi | S | 50 | 130 | Futuro |
+| `tsukuyomi` | Tsukuyomi | Genjutsu | Uchiha | Gen 42 + Nin 20 | Perseguição a Itachi | S | 50 | — | Futuro |
+| `jyuuken` | Jyuuken (Herança) | Taijutsu | Hyuuga | Tai 10 | Início | C | 12 | 40 | F2 |
+| `hakke_sanjuuni` | Hakke Sanjuuni Shou | Taijutsu | Hyuuga | Tai 18 | Exame Chunin (mês de treino) | B | 22 | 60 | F2 |
+| `kaiten` | Kaiten | Taijutsu | Hyuuga | Tai 22 + Vel 12 | Exame Chunin (Preliminares) | B | 22 | — | F2 |
+| `hakke_rokujuuyon` | Hakke Rokujuuyon Shou | Taijutsu | Hyuuga | Tai 34 + Vel 20 | Exame Chunin (Finais) | A | 38 | 100 | F2 |
+| `kagemane` | Kagemane no Jutsu | Ninjutsu | Nara | Nin 10 + Int 12 | Exame Chunin (Floresta da Morte) | C | 14 | — | F2 |
+| `kagenui` | Kagenui no Jutsu | Ninjutsu | Nara | Nin 18 + Int 16 | Exame Chunin (mês de treino) | B | 22 | 45 | F2 |
+| `kage_kubishibari` | Kage Kubishibari no Jutsu | Ninjutsu | Nara | Nin 22 + Int 18 | Exame Chunin (Finais) | B | 24 | 50 | F2 |
+| `bubun_baika` | Bubun Baika no Jutsu (Herança) | Taijutsu | Akimichi | Tai 10 | Início | C | 12 | 42 | F2 |
+| `baika` | Baika no Jutsu | Taijutsu | Akimichi | Tai 16 | Exame Chunin (mês de treino) | B | 20 | — | F2 |
+| `nikudan_sensha` | Nikudan Sensha | Taijutsu | Akimichi | Tai 22 (+ Baika no Jutsu) | Exame Chunin (Preliminares) | B | 22 | 70 | F2 |
+| `chou_baika` | Chou Baika no Jutsu | Taijutsu | Akimichi | Tai 30 + HP 25 | Recuperação do Sasuke | A | 36 | — | F3 |
+| `kikaichuu` | Kikaichuu no Jutsu (Herança) | Ninjutsu | Aburame | Nin 10 + Int 10 | Início | C | 12 | — | F2 |
+| `mushi_bunshin` | Mushi Bunshin no Jutsu | Ninjutsu | Aburame | Int 14 | Exame Chunin (mês de treino) | C | 14 | — | F2 |
+| `mushidama` | Mushidama | Ninjutsu | Aburame | Nin 30 + Int 20 | Shippuden | A | 36 | 90 | Futuro |
+
+As sagas mínimas dos jutsus que o DD v2 marcava com ◇ (estimativa conservadora) entraram nos dados como estavam e ainda não foram conferidas no anime (Apêndice D). O Omote Renge, que o DD v2 punha em "Exame Chunin (Oito Portões)", usa o ponto "Exame Chunin (Preliminares)", o mais próximo da lista de pontos da história (`src/data/story.ts`).
+
+### B.3 Golpes exclusivos de inimigos
+
+Não aparecem na Enciclopédia (`enemyOnly`). Zabuza também usa o Suiton: Suiryuudan do catálogo geral.
+
+| `id` | Golpe | Categoria / elemento | Quem usa | Grau | Chakra | Poder | Fase |
+|---|---|---|---|---|---|---|---|
+| `golpe_pesado` | Golpe Pesado | Taijutsu | Bandido e Bandido Veterano | D | 8 | 24 | F0 |
+| `kunai_lancada` | Kunai Lançada | Ninjutsu | Ninja Renegado, Mercenário da Névoa e Veteranos | D | 6 | 22 | F0 |
+| `kubikiribouchou` | Kubikiribouchou | Taijutsu | Zabuza | C | 0 | 30 | F1A |
+| `kirigakure` | Kirigakure no Jutsu (+15% de esquiva por 3 turnos) | Ninjutsu | Zabuza | C | 12 | — | F1A |
+| `muon_satsujin` | Muon Satsujin | Taijutsu | Zabuza | C | 18 | 45 | F1A |
+| `senbon` | Senbon | Ninjutsu | Haku | C | 0 | 30 | F1A |
+| `makyou_hyoushou` | Makyou Hyoushou (+25% de esquiva por 3 turnos) | Ninjutsu / Água | Haku | B | 14 | — | F1A |
+| `sensatsu_suishou` | Sensatsu Suishou | Ninjutsu / Água | Haku | B | 20 | 55 | F1A |
+
+O Poder dos golpes de inimigo é o base; o multiplicador de dano do grau (Apêndice A.3) entra na fórmula de dano. O DD v2 A.4 trazia o Poder já multiplicado.
+
+### B.4 Itens canônicos e backlog
+
+Os itens canônicos do DD v2 B.8 (Kibaku Fuda, Shuriken, Pílula de Soldado, pílulas Akimichi) não entraram no MVP; a loja do MVP é a da Seção 11 (`src/data/items.ts`). O backlog canônico do DD v2 B.9 (Oito Portões, Modo Sábio, Kurama, Susanoo, Hiraishin, invocações, Kekkei Genkai como Hyouton e Mokuton) continua como visão: cada um vira **mecânica própria** (Seção 20), e não só um jutsu.
+
+---
+
+## Apêndice C — Glossário
+
+| Termo | Significado neste documento |
+|---|---|
+| **Rank ninja** | Genin, Chunin, Jounin: o posto do personagem (Seção 4). É o **único** uso da palavra "rank". |
+| **Grau** | Escala D, C, B, A, S de jutsus, inimigos e itens. A C11 trocou "rank" por "grau" nos textos de item e de inimigo da interface. O D+ é uma variante do grau D que só existe para inimigos elite. |
+| **Nível** | Nível de experiência do personagem; sobe por XP dentro da run (Apêndice A.1). |
+| **Nível de história** | Nível esperado de um encontro da saga; define a força do inimigo (Seções 9 e 12). |
+| **Run** | Uma tentativa completa: da criação do personagem à morte, à vitória sobre Haku ou ao abandono. |
+| **Encontro** | Uma batalha da sequência de uma saga (26 na Saga da Onda). |
+| **Elite** | Variante D+ de um comum, opcional, oferecida em 3 bifurcações por run (Seção 12). |
+| **Acampamento** | Parada antes de cada chefe: HP e chakra a 100% e ponto de save (Seção 9). |
+| **Saga mínima** | Ponto da história a partir do qual um jutsu pode ser aprendido (Seção 8). |
+| **Herança** | Marca do jutsu básico de clã que pode ser aprendido desde o início (Seção 8). |
+| **Maestria** | Domínio de **um jutsu** por uso, de +1 a +5 (Seção 8). Sempre da run. |
+| **Pontos de Legado** | Moeda persistente da meta-progressão, F2 (Seção 15). Antes "Pontos de maestria". |
+| **Reputação** | Número que libera a promoção de rank ninja (Seção 4). Da run. |
+| **Ryo** | Moeda da loja (Seção 11). Da run. |
+| **Atributo base / efetivo** | Base = inicial + pontos + clã + Pergaminhos Raros, e só ele desbloqueia jutsu; efetivo = base + equipamento + efeitos (Seção 3). |
+| **Poder Ninja** | Número informativo que resume a força do personagem; não entra em fórmula (Seção 3). |
+| **Transformação** | Efeito ligado e desligado pelo jogador, mantido por chakra a cada turno, como o Sharingan (Seção 10). |
+| **Carga** | Efeito que se gasta ao ser usado, como o Kawarimi que anula o próximo golpe (Seção 10, C3). |
+| **Tenacidade** | Imunidade de 2 turnos a novos controles depois que um controle termina (Seção 10). |
+| **Preset** | Distribuição recomendada de pontos (Ninjutsu, Taijutsu, Equilibrado-guiado) oferecida na criação e a cada nível (Seção 5, C9). |
+| **RNG com semente** | Gerador de números aleatórios que repete a mesma sequência a partir da mesma semente; todo sorteio do jogo passa por ele (Seção 18). |
+| **Simulador headless** | Programa que joga runs completas sem interface, com um robô, para medir o balanceamento (Seção 18, Apêndice A). |
+| **Build focada** | Build do simulador que entra nas metas (as seis de Ninjutsu e Taijutsu; Apêndice A.4). |
+| **Meta de design** | Faixa que a spec §12 quer para uma métrica do simulador (`TARGETS`); hoje só informativa (Apêndice A.6). |
+| **Faixa de regressão (faixa da build)** | Faixa própria de uma build em `BUILD_BANDS`, nunca mais estreita que a meta de design; o `sim:check` falha se a build sair dela (Apêndice A.6). |
+| **`ASSUMIDO`** | Marca de uma regra que o DD v2 não define e que a spec ou o código decidiu, com justificativa (`docs/ANALISE.md` §4). |
+| **Quarentena de save** | Cópia de um save inválido para uma chave `nxr.*.corrupt.<timestamp>`, para o jogo seguir limpo sem perder o arquivo (Seção 18). |
+| **Cn** | Uma das 15 correções do DD v2 feitas pela spec (C1 a C15, `docs/ANALISE.md` §2). |
+
+---
+
+## Apêndice D — Decisões em Aberto
+
+As 12 decisões em aberto do DD v2, uma a uma, e as que o MVP abriu.
+
+| # | Decisão do DD v2 | Situação |
+|---|---|---|
+| 1 | Conferir no anime os nomes e as sagas mínimas estimadas (◇) | **Segue em aberto.** Os jutsus entraram nos dados com as estimativas do DD v2; os dois ◇ jogáveis (Daitoppa e Doryuuheki, Saga da Onda) não foram conferidos, e os de F2 em diante só aparecem na Enciclopédia |
+| 2 | "Selo de Quatro Elementos" trocado por Gogyou Fuuin | **Decidido no MVP (C7):** é o Gogyou Fuuin, Geral e da F2, porque na obra é técnica do Orochimaru; saiu do pool do Uzumaki |
+| 3 | Haku mais fácil que Zabuza | **Decidido no MVP (C6):** segunda fase abaixo de 50% do HP e HP do grau B a ×1,7 pela calibração (Apêndice A.3) |
+| 4 | Builds recomendadas na criação | **Decidido no MVP (C9):** presets Ninjutsu, Taijutsu e Equilibrado-guiado e o botão "Distribuir pelo preset" |
+| 5 | Uchiha abaixo dos outros clãs na Saga da Onda | **Segue em aberto.** Com 3000 runs, Ninjutsu / Uchiha vence Zabuza em 41%; a faixa por build (decisão do usuário) aceita isso como piso de regressão, mas não compensa. Ativar o Sharingan sem gastar o turno (`ASSUMIDO`) foi a única ajuda; rever depois de o usuário jogar |
+| 6 | Variação entre runs na F1A ou na F1B | **Decidido no MVP (decisão do usuário, spec §1):** só a escolha 1-de-3 ao subir de nível entrou, sem jutsu (C12); os eventos entre encontros ficam para depois |
+| 7 | Queimadura de 4% por 3 turnos sem simulação | **Decidido no MVP:** o valor do DD v2 foi mantido (`src/data/effects.ts`) e entra no simulador pelos jutsus de Fogo que o robô usa (Bola de Fogo e Goukakyuu); não foi medido isoladamente |
+| 8 | Tempo de uma run (meta de 25 a 35 minutos) | **Segue em aberto.** Não há playtest humano registrado, e o jogo não mede o tempo de run |
+| 9 | F0 até Zabuza ou só até o encontro 6 | **Decidido no MVP (decisão do usuário, spec §1):** o MVP foi além da F0 e entregou a Saga da Onda inteira |
+| 10 | Risco de propriedade intelectual | **Segue em aberto** quanto a publicar. O MVP é projeto de fã, local, sem monetização e sem arte oficial; o package se chama `ninja-x-rogue` |
+| 11 | Ordem canônica das sagas futuras | **Segue em aberto.** A ordem dos pontos da história está em `src/data/story.ts` e a da Seção 12 segue o DD v2, mas o conteúdo de F2 e F3 não foi analisado (`docs/ANALISE.md` §7) |
+| 12 | Espaço para novas definições | Ocupado pelas decisões abertas abaixo |
+
+### Abertas pelo MVP
+
+- **Distância entre builds.** Uzumaki vence Haku em 94–95% de quem vence Zabuza; Uchiha fica no piso. As correções sugeridas pela calibração, fora dos multiplicadores de grau, são tirar os consumíveis da escolha 1-de-3 ou reduzir a cura do kit (40% para 25–30%) e revisar a passiva do Uzumaki. **Segue em aberto**, para depois de o usuário jogar (`docs/balance-log.md`).
+- **Métrica de maestria.** O Taijutsu concentra os usos num golpe só e passa de +4; medir pelos dois jutsus mais usados é a alternativa registrada. **Segue em aberto.**
+- **Build Equilibrado.** Nunca vence Zabuza (0%). Não é build focada, mas falta decidir se ela deve ser viável. **Segue em aberto.**
+- **Desempenho do simulador.** `npm run sim` leva 141,1 s, acima da meta de 30 s. **Segue em aberto.**
+- **Títulos por categoria** (linhas de Taijutsu, Genjutsu e Fuinjutsu, Seção 14). **Segue em aberto.**
+- **Conferência visual no navegador.** Layout, animações e cores não são cobertos por teste automático. **Segue em aberto.**
+
+---
+
+## Apêndice E — Registro de Mudanças (v3.0)
+
+### Mudanças de forma
+
+- Toda seção abre com uma linha de estado (Implementado, Parcial ou Futuro) e fecha com o que a spec §1 deixou de fora.
+- Todo número vem do código: constantes de `src/game/Balance.ts`, marcadas para o `npm run docs:check` conferir, e conteúdo de `src/data/`.
+- A Seção 19 descreve a estrutura real do projeto, e não a sugerida; o Apêndice A traz os números finais do simulador, e o Apêndice B, o catálogo lido dos dados.
+
+### Correções do DD v2 (C1–C15)
+
+| # | Problema no DD v2 | Correção no v3 | Seções |
+|---|---|---|---|
+| C1 | Maestria como `(1 + Maestria)` na fórmula de dano dava +100% por nível | Termo `(1 + 0,03·m)` | 3, 8, 9 |
+| C2 | Não dizia onde entram os bônus de dano de título, clã, transformação e buffs | Um termo aditivo único `(1 + Σ bônus %)` | 3, 9 |
+| C3 | "Prioridade" do Kawarimi num turno sequencial | Carga que anula o próximo golpe, 2 turnos | 9, 10, Ap. B |
+| C4 | Kunai "+2 de Crítico" ambíguo | +2 no atributo Crítico e +2 Velocidade | 11 |
+| C5 | Blocos da tabela A.4 fora da própria regra e elite de grau "E" | Inimigos gerados por código; elite D+ | 9, Ap. A |
+| C6 | Haku mais fácil que Zabuza | Segunda fase e HP do grau B maior (×1,7 calibrado) | 9, Ap. A |
+| C7 | Gogyou Fuuin exclusivo do Uzumaki e geral ao mesmo tempo | Geral e da F2 | 6, Ap. B |
+| C8 | Elites levariam a reputação a 1000 na Onda | Não levam (máximo 976); texto corrigido | 4, 12 |
+| C9 | Builds espalhadas travam em Zabuza sem orientação | Presets na criação e "Distribuir pelo preset" | 5 |
+| C10 | Meditar fora da barra de batalha | Barra com Atacar, Defender, Meditar, Item, Transformar e 4 jutsus | 9, 13 |
+| C11 | "rank" para item e inimigo | "grau" | 4, 9, 13, Ap. C |
+| C12 | Jutsu como recompensa da escolha 1-de-3 | Jutsu só por condição de status (decisão do usuário) | 8, 15 |
+| C13 | Kai inutilizável sob controle | Sob Ilusão, a única ação permitida é Kai | 9, 10 |
+| C14 | Colecionador e Novo Chunin impossíveis no MVP | Nos dados, ocultos até a F2 | 14, 15 |
+| C15 | Hakke no Fuuin Shiki F2+ e F3 ao mesmo tempo | F3 | 6, Ap. B |
+
+### Decisões tomadas depois da spec (`docs/ANALISE.md` §5)
+
+| Decisão | Efeito no design |
+|---|---|
+| HP do Haku ×1,7 em vez de ×1,5 | A C6 fixa o objetivo, não o número (Apêndice A.3) |
+| Dano dos comuns (grau D) 0,65 | HP no fim dos comuns entra na meta sem derrubar "chega a Zabuza" |
+| Métrica de maestria = jutsu principal | O simulador mede o jutsu mais usado da run |
+| Robô não defende dois turnos seguidos e compra na ordem do DD v2 A.5 | Evita a espiral de defesa e mantém a referência de compra (Apêndice A.4) |
+| Título "Por um Fio" usa o limite dos dados | A condição lê `maxHpPct` em `src/data/titles.ts` |
+| `recordRunEnd` idempotente e boot que finaliza run encerrada | A meta nunca conta a mesma run duas vezes (Seção 15) |
+| Save que nunca lança | Quarentena do save inválido (Seção 18) |
+| Enciclopédia mostra jutsus bloqueados com requisitos | Reforça a coleção e as metas "faltam X para Y" (Seções 2 e 8) |
+| Colecionador e Novo Chunin ocultos até a F2 | Aplicação direta da C14 |
+| Abandonar a run com a gravação da meta falhando | A run encerrada fica salva para o próximo boot (Seção 18) |
+| Erro de render ou de animação nunca prende o jogador | Tela de erro com Recarregar (Seção 18) |
+| Versões de dependência | `phaser` fixo na linha 3.88; `happy-dom` e `vitest` atualizados por segurança (Seção 18) |
+
+E uma decisão do Plano 3: **faixas por build** no `sim:check` (decisão do usuário, Apêndice A.6), que troca a proteção "toda build dentro da meta de design" por "nenhuma build pior que hoje", com a distância até a meta ainda impressa.
+
+### Números que mudaram em relação ao DD v2
+
+| Constante | DD v2 | v3 (código) | Motivo |
+|---|---|---|---|
+| Dano do grau D | ×0,6 | ×0,65 | calibração, iteração 1 |
+| HP do grau C | ×1,3 | ×2,1 | calibração, iteração 2 |
+| Dano do grau C | ×0,72 | ×0,81 | calibração, iteração 3 |
+| HP do grau B | ×1,3 | ×1,7 | C6 (×1,5) e calibração, iteração 4 |
+| Pontos do Bandido de nível 1 | 41 | 35 | C5 (gerado pela regra) |
+| Grau da elite | "E" | D+ | C5 |
