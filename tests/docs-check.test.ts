@@ -44,6 +44,9 @@ describe('verificador de documentos', () => {
   it('acha marcadores de pendência, mas não dentro de código', () => {
     expect(forbiddenMarkers('texto\nTODO: depois\nok')).toEqual(['TODO: depois']);
     expect(forbiddenMarkers('```\nTODO\n```')).toEqual([]);
+    // "todo"/"toda" são palavras comuns em português: só o marcador em maiúsculas conta.
+    expect(forbiddenMarkers('todo jogador e toda run terminam em derrota ou vitória')).toEqual([]);
+    expect(forbiddenMarkers('Isso fica A DEFINIR depois')).toEqual(['Isso fica A DEFINIR depois']);
   });
 
   it('confere fatos numéricos contra o código', () => {

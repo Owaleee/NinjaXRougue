@@ -65,11 +65,13 @@ export function pathRefs(md: string): string[] {
   return [...out];
 }
 
-const FORBIDDEN = /\b(TODO|TBD|FIXME|XXX)\b|a definir|preencher depois/i;
+/** Marcadores em maiúsculas (diferencia caixa: "todo" é uma palavra comum em português) e frases de pendência. */
+const FORBIDDEN_UPPER = /\b(?:TODO|TBD|FIXME|XXX)\b/;
+const FORBIDDEN_PHRASE = /a definir|preencher depois/i;
 
 export function forbiddenMarkers(md: string): string[] {
   return proseLines(md)
-    .filter((l) => FORBIDDEN.test(l))
+    .filter((l) => FORBIDDEN_UPPER.test(l) || FORBIDDEN_PHRASE.test(l))
     .map((l) => l.trim());
 }
 
