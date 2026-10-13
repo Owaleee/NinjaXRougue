@@ -558,3 +558,589 @@ Regras:
 - Os parâmetros (usos por nível, bônus por nível, tetos) ficam em `src/game/Balance.ts`, e as funções em `src/game/progression/mastery.ts`: calibrar não exige mexer no código.
 
 **Fica de fora do MVP (spec §1):** slots 6 e 8 (dependem da promoção, F2), os jutsus de F2, F3 e Futuro como técnicas jogáveis (estão nos dados só para a Enciclopédia) e a infusão elemental.
+
+---
+
+## 9. Sistema de Combate e Grau de Inimigos
+
+**Estado:** Implementado (MVP)
+
+O combate 1x1 por turnos, as ações, a recuperação, os graus de inimigo e a IA estão no código. Batalhas em equipe são visão.
+
+### Formato
+
+O MVP é 1x1; batalhas 3x3 continuam anotadas como possibilidade futura. Mesmo em 1x1, o motor trata a batalha como uma **lista de combatentes** com lado (jogador ou inimigo), e não como "um jogador contra um inimigo" fixo (`BattleState.combatants` em `src/game/combat/types.ts`). Isso deixa o caminho aberto para invocações e batalhas em equipe (Seções 18 e 20).
+
+### Ordem de turno
+
+A cada rodada, todo combatente vivo age uma vez, do mais rápido para o mais lento, pela `Velocidade efetiva × (1 + sorteio entre 0 e 0,10)` recalculada a cada rodada (Seção 3). Uma pequena vantagem de Velocidade não garante a iniciativa em todo turno, e a Velocidade deixa de ser obrigatória. O turno é **sequencial** (`ASSUMIDO` da spec): cada combatente escolhe a ação na sua vez, o que corresponde ao "Seu turno / Turno do inimigo" da interface. Por isso não existe "prioridade": o DD v2 dava prioridade a alguns jutsus e itens, e o único que a tinha, o Kawarimi, virou uma carga que anula o próximo golpe recebido (C3).
+
+O início de cada turno segue uma ordem fixa: regeneração de chakra, manutenção da transformação, dano contínuo, controle e, por fim, a contagem das durações (`beginTurn` em `src/game/combat/battle.ts`). Uma luta que passa de 200 <!-- fact: BALANCE.battle.maxRounds=200 --> rodadas termina com a vitória do inimigo: é uma trava contra lutas infinitas, não uma regra de jogo que o jogador deva encontrar.
+
+### Ações por turno
+
+| Ação | Descrição | Custo |
+|---|---|---|
+| Atacar | Golpe básico de Taijutsu, Poder 18 <!-- fact: BALANCE.power.attack=18 -->, neutro; a arma entra pelos atributos que dá | 0 |
+| Usar Jutsu | Um dos jutsus equipados (Seção 8), com o dano escalado pelo atributo da categoria | Chakra |
+| Defender | Dano recebido ×0,5 <!-- fact: BALANCE.actions.defendDamageMult=0.5 --> até o próximo turno e recupera 10% <!-- fact: BALANCE.actions.defendChakraPct=0.1 --> do chakra máximo | — |
+| Meditar | Passa o turno e recupera 25% <!-- fact: BALANCE.actions.meditateChakraPct=0.25 --> do chakra máximo (30% no Uzumaki); não reduz dano | — |
+| Usar Item | Consumível do inventário (kit médico, pílula de chakra, Pergaminho de Reforço) | A ação do turno (`ASSUMIDO`); o item é gasto |
+| Transformar | Liga ou desliga a transformação (Sharingan); só aparece para quem tem uma | Não gasta o turno (`ASSUMIDO`); 1 vez por turno |
+| Trocar personagem | Só em batalhas em equipe [Futuro] | — |
+
+A barra de batalha tem Atacar, Defender, Meditar, Item, Transformar e os 4 jutsus (C10, Seção 13). Sob **Ilusão**, a única ação permitida é Kai, que remove a Ilusão (C13, Seção 10).
+
+### Fórmula de dano e chance de acerto
+
+A fórmula é a da Seção 3, já com as duas correções: o termo de maestria `(1 + 0,03·m)` (C1) e o termo único `(1 + Σ bônus % de dano)` que soma título, clã, transformação e buffs (C2). Para o inimigo, entra também o **multiplicador de dano do grau** (tabela abaixo); para o jogador ele vale 1. Não existe teste de precisão separado: o golpe sempre tenta acertar e o defensor pode esquivar (teto de 40%). Antes da esquiva, uma carga de Kawarimi anula o golpe e a de Henge pode fazê-lo errar; depois dela, um clone do Kage Bunshin pode absorvê-lo (`resolveHit` em `src/game/combat/damage.ts`). Efeitos de névoa e de espelhos, como o Kirigakure de Zabuza e o Makyou de Haku, somam bônus de esquiva sob o mesmo teto.
+
+### Recuperação entre encontros e Acampamento
+
+| Momento | Recupera |
+|---|---|
+| Fim de cada encontro vencido | 25% <!-- fact: BALANCE.recovery.encounterHpPct=0.25 --> do HP máximo e 50% <!-- fact: BALANCE.recovery.encounterChakraPct=0.5 --> do chakra máximo |
+| Subir de nível | +25% <!-- fact: BALANCE.recovery.levelUpHpPct=0.25 --> do HP máximo, além do aumento do próprio máximo (`gainXp` em `src/game/progression/character.ts`) |
+| **Acampamento** (antes de cada chefe) | HP e chakra a 100% (`restAtCamp` em `src/game/run/runManager.ts`) |
+| Kit médico / pílula de chakra | 40% do HP / 50% do chakra máximo (Seção 11) |
+
+O Acampamento também é ponto de save, como o fim de cada encontro (Seção 18). Dentro da batalha não há save: recarregar no meio da luta volta ao início do encontro, com a mesma semente (`ASSUMIDO` da spec, contra save-scum).
+
+### Grau de inimigos
+
+Todo inimigo, comum ou chefe, mostra um **grau** de dificuldade, na mesma escala D a S dos jutsus e dos itens. Na batalha, o painel do inimigo traz o badge "Grau D", "Grau D+", "Grau C" ou "Grau B" (`battle.grade` em `src/i18n/pt-BR.ts`).
+
+> **Grau não é rank.** "Grau" é a escala D a S de inimigos, jutsus e itens; "rank" é só o posto do ninja (Genin, Chunin, Jounin, Seção 4). O DD v2 §13 e §14 ainda chamavam de "rank" o grau de itens e inimigos; a **C11** trocou o termo em todos os textos da interface (`battle.grade`, `map.eliteInfo` e `hist.defeated` em `src/i18n/pt-BR.ts`). O "D+" do inimigo elite também não é um grau de item ou de jutsu: é uma variante do grau D que só existe para inimigos.
+
+| Grau | Tipo de inimigo | No MVP (`src/data/enemies.ts`) |
+|---|---|---|
+| D | Bandidos e ninjas renegados sem clã (encontros comuns) | Bandido, Ninja Renegado, Mercenário da Névoa |
+| D+ (Elite) | Variante de um comum, opcional, mais forte e mais recompensadora | Bandido Veterano, Renegado Veterano, Mercenário Veterano |
+| C | Primeiro chefe de saga | Zabuza Momochi (Água) |
+| B | Chefe final ou segunda fase de saga | Haku (Água) |
+| A | Chefe de arco maior | [F2] Gaara (Invasão de Konoha), Orochimaru |
+| S | Chefe raro ou final de fase avançada | [Futuro] reservado |
+
+### Escala de força dos inimigos
+
+A força de um inimigo **não depende do nível real do jogador**, e sim do **nível de história do encontro** (Seção 12): quem está abaixo do nível esperado sente o risco, e quem está acima é recompensado.
+
+1. **Pontos de atributo** = `round(P(N) × razão do grau)`, com `P(N) = 50 + 7·(N − 1)` (Seção 3). Desde a **C5**, os inimigos são **gerados por código**, e não copiados da tabela A.4 do DD v2, que dava ao Bandido de nível 1 41 pontos quando a própria regra dá 35, e que chamava a elite de grau "E", inexistente. Os pontos são distribuídos pelos pesos do **arquétipo** (bruto, ninja, espadachim, ágil) pelo método do maior resto, com mínimo de 1 por atributo (`distributePoints` e `createEnemy` em `src/game/combat/enemyFactory.ts`).
+2. HP e chakra usam as mesmas fórmulas do jogador, e o HP máximo é multiplicado pelo multiplicador de HP do grau. Esquiva e crítico também são as do jogador.
+3. O **multiplicador de dano** entra na fórmula de dano dos golpes do inimigo. É ele que faz um comum tirar uma fatia controlada do HP do jogador por luta, e não o atributo.
+
+| Grau | Razão de pontos | Multiplicador de HP | Multiplicador de dano | Situação |
+|---|---|---|---|---|
+| D | 0,7 <!-- fact: BALANCE.enemyGrades.D.pointsRatio=0.7 --> | ×0,8 <!-- fact: BALANCE.enemyGrades.D.hpMult=0.8 --> | ×0,65 <!-- fact: BALANCE.enemyGrades.D.damageMult=0.65 --> | simulado; dano calibrado de 0,6 para 0,65 |
+| D+ (Elite) | 0,9 | ×1,0 | ×0,8 | jogável, não medido em separado pelo simulador |
+| C | 1,1 <!-- fact: BALANCE.enemyGrades.C.pointsRatio=1.1 --> | ×2,1 <!-- fact: BALANCE.enemyGrades.C.hpMult=2.1 --> | ×0,81 <!-- fact: BALANCE.enemyGrades.C.damageMult=0.81 --> | simulado e calibrado |
+| B | 1,2 <!-- fact: BALANCE.enemyGrades.B.pointsRatio=1.2 --> | ×1,7 <!-- fact: BALANCE.enemyGrades.B.hpMult=1.7 --> | ×0,8 <!-- fact: BALANCE.enemyGrades.B.damageMult=0.8 --> | simulado e calibrado (C6) |
+| A | 1,35 <!-- fact: BALANCE.enemyGrades.A.pointsRatio=1.35 --> | ×1,5 <!-- fact: BALANCE.enemyGrades.A.hpMult=1.5 --> | ×0,9 <!-- fact: BALANCE.enemyGrades.A.damageMult=0.9 --> | **não simulado** (estimativa do DD v2) |
+| S | 1,5 <!-- fact: BALANCE.enemyGrades.S.pointsRatio=1.5 --> | ×1,7 <!-- fact: BALANCE.enemyGrades.S.hpMult=1.7 --> | ×1,0 <!-- fact: BALANCE.enemyGrades.S.damageMult=1 --> | **não simulado** (estimativa do DD v2) |
+
+**Os graus C e B foram calibrados pelo simulador.** O DD v2 dava ao grau C HP ×1,3 e dano ×0,72, e ao grau B HP ×1,3 e dano ×0,8. Com esses números, quase todas as builds venciam Zabuza (93–98%), e Haku saía mais fácil que Zabuza, embora fosse o chefe final (o problema da **C6**). A spec subiu o HP do grau B para ×1,5 e deu ao Haku uma segunda fase; a calibração seguinte, em quatro iterações registradas em `docs/balance-log.md`, levou o grau C a HP ×2,1 e dano ×0,81 e o grau B a HP ×1,7. A C6 fixava o objetivo (de quem vence Zabuza, 70% a 85% vencem Haku), não o número literal; por isso vale o valor do código (`docs/ANALISE.md` §5).
+
+Exemplos gerados pelo código (pontos, HP máximo e chakra máximo):
+
+| Inimigo | Nível de história | Grau | Pontos | HP | Chakra |
+|---|---|---|---|---|---|
+| Bandido | 1 | D | 35 | 94 | 36 |
+| Ninja Renegado | 4 | D | 50 | 112 | 50 |
+| Bandido Veterano | 4 | D+ | 64 | 160 | 49 |
+| Zabuza Momochi | 5 | C | 86 | 374 | 55 |
+| Mercenário da Névoa | 9 | D | 74 | 149 | 71 |
+| Haku | 10 | B | 136 | 347 | 78 |
+
+Haku tem menos HP que Zabuza, mas é mais difícil: o arquétipo ágil concentra os pontos dele em Velocidade (38 no nível 10) e Ninjutsu (33), os Espelhos de Gelo somam +25% de esquiva e a segunda fase prioriza o golpe mais forte.
+
+### IA de inimigos
+
+**Estado:** Implementado (MVP)
+
+A IA é determinística: o mesmo estado gera a mesma escolha, o que mantém testes e simulador estáveis (`src/game/combat/ai.ts`).
+
+1. Abaixo de 25% <!-- fact: BALANCE.ai.defensiveHpPct=0.25 --> do HP, usa um jutsu defensivo (sem dano, só com efeitos em si mesmo) que ainda não esteja ativo, se tiver.
+2. Se um jutsu de dano tem vantagem elemental sobre o jogador, ele tem prioridade, mesmo que não seja o de maior dano bruto.
+3. Senão, usa o jutsu de maior dano esperado que o chakra permite, ou Atacar, se Atacar render mais.
+4. Sem chakra para nenhum jutsu, ataca.
+5. **Chefes** têm padrões próprios (`ASSUMIDO` da spec nos detalhes) e mudam abaixo de 50% <!-- fact: BALANCE.ai.phase2HpPct=0.5 --> do HP. **Zabuza** abre com Kirigakure no Jutsu e a renova sempre que expira; na segunda fase, ataca de dentro da névoa com Muon Satsujin ou usa o Suiryuudan. **Haku** abre com Makyou Hyoushou; na segunda fase, renova os espelhos e prioriza Sensatsu Suishou (C6).
+
+**Fica de fora do MVP (spec §1):** batalhas em equipe e a ação Trocar, inimigos de grau A e S, cronômetro de turno.
+
+---
+
+## 10. Efeitos, Buffs e Debuffs
+
+**Estado:** Implementado (MVP)
+
+Tudo o que altera temporariamente um combatente (buff, debuff, controle, dano contínuo, carga e transformação) é um **efeito**, tratado por um único sistema genérico (`src/game/effects/EffectSystem.ts`), com os efeitos descritos como dados em `src/data/effects.ts`. Vale para jutsus, itens, passivas de clã, títulos e ações de inimigos.
+
+### Estrutura de um efeito
+
+| Campo | Descrição |
+|---|---|
+| Nome, ícone e descrição | Como aparece na interface |
+| Tipo | Buff, debuff, controle, dano contínuo ou transformação |
+| Fonte | Quem aplicou (o efeito guarda o id da fonte) |
+| Modificadores | O que altera: % de atributo, esquiva, crítico, % de dano (geral, de jutsu ou por elemento), redução de dano, custo de chakra, ryo, reputação, preço na loja |
+| Carga | Opcional: consumida pelo próximo golpe recebido (anular, absorver ou chance de errar) |
+| Duração | Em turnos do próprio portador, até o fim da batalha ou sustentada |
+
+**Acúmulo:** reaplicar um efeito que já está ativo **renova a duração** e não soma intensidade. A exceção é o controle, com a regra própria abaixo.
+
+### Tipos de duração
+
+- **Por turnos:** conta os turnos do **próprio portador** e expira depois de N deles (Pergaminho de Reforço 5 turnos, Queimadura 3, Kawarimi 2).
+- **Sustentado:** fica ativo enquanto o portador paga o custo por turno. É o caso do Sharingan, 2 de chakra por turno, que termina sozinho quando falta chakra. A interface mostra "∞" no lugar da contagem.
+- **Passivo da run:** passivas de clã e o buff do título ativo não são efeitos com duração; entram como modificadores permanentes do combatente durante a run inteira (Seção 14).
+
+### Transformação
+
+A transformação é uma categoria genérica, decidida pelo usuário para o Sharingan (spec §4.1) e pensada para receber Modo Sábio e Bijuu sem código novo. Tem custo de ativação, custo por turno, a marca de gastar ou não o turno ao ativar, e os modificadores. Só uma transformação fica ativa por vez, ela pode ser ligada ou desligada 1 vez por turno e termina por falta de chakra, ao ser desligada ou no fim da batalha. Os valores do Sharingan estão na Seção 6.
+
+### Cargas
+
+Três efeitos do MVP são **cargas**, consumidas pelo próximo golpe recebido: Kawarimi anula o golpe por inteiro (C3), Henge dá 30% de chance de ele errar e Kage Bunshin põe um clone para absorvê-lo (o clone some; o bônus de +25% de dano em jutsus continua até a duração acabar). As cargas resolvem a ideia de "prioridade" do DD v2 sem quebrar o turno sequencial.
+
+### Regras de balanceamento de efeitos
+
+**Controle** (Imobilizado, Atordoado e Ilusão no MVP) é o efeito mais perigoso do jogo, porque, em 1x1, ficar sem agir é quase derrota. Por isso:
+
+- **Duração máxima:** 2 <!-- fact: BALANCE.control.maxTurnsCommon=2 --> turnos em inimigos comuns e 1 <!-- fact: BALANCE.control.maxTurnsBoss=1 --> em chefes; o Kongou Fuusa, que pede 2 turnos, prende Zabuza e Haku só por 1.
+- **Tenacidade:** quando um controle termina, o alvo fica imune a novos controles por 2 <!-- fact: BALANCE.control.tenacityTurns=2 --> turnos. Isso impede o "stun-lock" sem eliminar a estratégia.
+- **Resistência de chefe:** a chance de controlar um chefe é multiplicada por 0,5 <!-- fact: BALANCE.control.bossChanceMult=0.5 -->.
+- **Chance de aplicar controle** = `chance base × (1 + Genjutsu/100, só para Ilusão) × (1 + 0,08·m) × resistência de chefe`, com teto de 85% <!-- fact: BALANCE.control.chanceCap=0.85 -->: nunca é garantido (`controlChance` em `src/game/formulas.ts`, divisor de Genjutsu 100 <!-- fact: BALANCE.control.genjutsuDivisor=100 -->).
+- **Um controle por vez:** aplicar outro controle enquanto há um ativo só renova a duração do atual, sem somar.
+- **Imobilizado e Atordoado** fazem perder o turno. Sob **Ilusão**, o jogador que tem Kai equipado e chakra para ele só pode usar Kai, que remove a Ilusão e inicia a Tenacidade; enquanto ele não usa, a Ilusão não expira sozinha. Sem Kai ou sem chakra, ele perde o turno como nos outros controles (C13, flag `onlyKai` em `src/game/combat/battle.ts`). O DD v2 dizia que Kai "remove controle de si mesmo", o que era impossível: quem está controlado não age.
+- **Efeitos que não são controle** (queimadura, lentidão) têm chance `chance base × (1 + 0,08·m)`, sem teto de 85% e sem resistência de chefe (`effectChance`). Efeitos no inimigo de um jutsu de dano só valem se o golpe acertou.
+- **Dano contínuo (Queimadura):** 4% do HP máximo do alvo no início de cada turno dele, por 3 turnos, sem acumular intensidade (renova a duração). O DD v2 marcava o valor como ainda não simulado; o código manteve os 4% e o simulador do MVP já joga com eles.
+
+### Efeitos do MVP
+
+| Efeito | Tipo | Fonte | Duração |
+|---|---|---|---|
+| Reforço de um atributo (+10%) | Buff | Pergaminho de Reforço (Tai, Nin, Gen, Vel ou Def, escolhido ao usar) | 5 turnos |
+| Sharingan | Transformação | Uchiha | Sustentado (2 de chakra por turno) |
+| Névoa (+15% de esquiva) | Buff | Kirigakure no Jutsu (Zabuza) | 3 turnos |
+| Espelhos de Gelo (+25% de esquiva) | Buff | Makyou Hyoushou (Haku) | 3 turnos |
+| Muralha de Lama (+25% de redução de dano) | Buff | Doton: Doryuuheki | 3 turnos |
+| Clones Ilusórios (+12% de esquiva) | Buff | Bunshin no Jutsu | 2 turnos |
+| Clones das Sombras (+25% de dano em jutsus, absorve 1 golpe) | Buff com carga | Kage Bunshin no Jutsu | 3 turnos |
+| Substituição (anula o próximo golpe) | Carga | Kawarimi no Jutsu | 2 turnos |
+| Henge (30% de o próximo golpe errar) | Carga | Henge no Jutsu | 1 turno |
+| Queimadura (4% do HP máximo por turno) | Dano contínuo | Bola de Fogo Básica, Katon: Goukakyuu | 3 turnos |
+| Defesa Reduzida (−5% de Defesa) | Debuff | Sennen Goroshi | 2 turnos |
+| Lentidão (−20% de Velocidade) | Debuff | Fuuton: Daitoppa | 2 turnos |
+| Imobilizado | Controle | Kongou Fuusa | 1 a 2 turnos (1 em chefes) |
+| Ilusão | Controle | Genjutsu: Sharingan | 1 turno |
+
+### Exibição na interface
+
+**Estado:** Parcial (MVP)
+
+- Abaixo das barras de HP e chakra de **cada lado** fica a fileira de efeitos ativos, cada um com o nome e os turnos restantes, ou "∞" para sustentado; passar o mouse mostra a descrição curta (`fighterPanel` em `src/ui-dom/screens/BattleScreen.ts`).
+- Ficam para depois: cores e bordas distintas por tipo de efeito (hoje todos os chips têm a mesma borda, e a informação vem do texto), o ícone próprio de controle com a Tenacidade visível e a área separada para passivas de clã e título, que hoje não aparecem na batalha.
+
+### Pensado para crescer
+
+**Estado:** Futuro (F2/F3)
+
+O sistema é a base de mecânicas futuras: **Modo Sábio**, **invocações**, formas avançadas, tomoe 2 e 3 do Sharingan e técnicas sustentadas. Nenhuma delas está no MVP, mas todas cabem no formato de efeito acima, como dados novos (Seção 20).
+
+**Fica de fora do MVP (spec §1):** efeitos dos clãs da F2 (Byakugan, sombras do Nara, drenagem do Aburame, redução de dano contínuo do Akimichi) e Sangramento.
+
+---
+
+## 11. Economia e Loja
+
+**Estado:** Parcial (MVP)
+
+Ryo, recompensas, loja, equipamento de 2 slots e Pergaminho Raro estão no código. O estoque por rank e os slots de equipamento futuros são visão.
+
+### Moeda: ryo
+
+O ryo é a moeda do jogo. **Reputação** promove o personagem (Seção 4); **ryo** compra itens na loja. Os dois pertencem à run e começam em 0.
+
+### Recompensas por encontro
+
+**Estado:** Implementado (MVP)
+
+| Encontro | Ryo | Reputação | XP |
+|---|---|---|---|
+| Inimigo comum (grau D) | 30 <!-- fact: BALANCE.rewards.D.ryo=30 --> | 22 <!-- fact: BALANCE.rewards.D.rep=22 --> | `8 + 4·N` (base 8 <!-- fact: BALANCE.xp.commonBase=8 -->, 4 <!-- fact: BALANCE.xp.commonPerLevel=4 --> por nível) |
+| Inimigo elite (grau D+) | 50 | 38 | ×1,6 <!-- fact: BALANCE.xp.eliteMult=1.6 --> o XP de um comum, arredondado |
+| Chefe grau C (Zabuza) | 200 <!-- fact: BALANCE.rewards.C.ryo=200 --> | 160 <!-- fact: BALANCE.rewards.C.rep=160 --> | ×4 o XP de um comum |
+| Chefe grau B (Haku) | 300 <!-- fact: BALANCE.rewards.B.ryo=300 --> | 240 <!-- fact: BALANCE.rewards.B.rep=240 --> | ×4 o XP de um comum |
+| Chefe grau A [F2] | 500 <!-- fact: BALANCE.rewards.A.ryo=500 --> | 400 <!-- fact: BALANCE.rewards.A.rep=400 --> | ×6 o XP de um comum (estimativa) |
+
+N é o nível de história do encontro (Seção 12). Os títulos com bônus de ryo ou reputação multiplicam a recompensa (`finishEncounter` em `src/game/run/runManager.ts`). Os encontros obrigatórios da Saga da Onda rendem **1220 ryo** (24 × 30 + 200 + 300); cada elite troca 30 por 50, e cada "Bolsa de ryo" escolhida na subida de nível soma 60 <!-- fact: BALANCE.shop.rewardRyo=60 --> (Seção 15).
+
+### Itens e preços
+
+**Estado:** Implementado (MVP)
+
+| Item | Grau | Efeito | Preço |
+|---|---|---|---|
+| Kit médico | D | Restaura 40% do HP máximo | 80 |
+| Pílula de chakra | D | Restaura 50% do chakra máximo | 70 |
+| Pergaminho de Reforço | D | +10% em Tai, Nin, Gen, Vel ou Def por 5 turnos (o atributo é escolhido ao usar, `ASSUMIDO`) | 60 |
+| Kunai | D | +2 Velocidade e +2 no atributo Chance de Crítico, arma (C4) | 250 |
+| Colete ninja | D | +3 Defesa, armadura | 300 |
+| Katana | C | +4 Taijutsu, arma | 600 |
+| Colete reforçado | C | +5 Defesa e +3 HP, armadura | 700 |
+| Pergaminho Raro | Raro | +1 permanente num atributo base à escolha | 900 |
+
+Os itens estão em `src/data/items.ts`. O orçamento de cerca de 1220 ryo permite, por exemplo, colete, kunai e alguns consumíveis, **mas não** tudo: o jogador precisa escolher. O Pergaminho Raro só cabe se ele abrir mão de quase todo o resto. O simulador compra numa ordem fixa (colete ninja, kunai, kits, pílula, katana só nas builds de Taijutsu e colete reforçado, Apêndice A.5) e não compra Pergaminho Raro (`botShop` em `src/game/sim/bot.ts`).
+
+### A loja
+
+**Estado:** Implementado (MVP)
+
+- Fica na **Preparação**, aberta entre encontros pelo mapa (inclusive no Acampamento) e pela tela de resultado (`src/ui-dom/screens/PrepScreen.ts`). Não há loja dentro da batalha.
+- **Estoque:** os consumíveis estão sempre à venda; 2 <!-- fact: BALANCE.shop.equipmentOffers=2 --> dos 4 equipamentos são sorteados, e cada um sai do estoque quando comprado (não se compra o mesmo equipamento duas vezes); há 1 <!-- fact: BALANCE.shop.rareScrollsPerStock=1 --> Pergaminho Raro por estoque (`generateStock` em `src/game/run/shop.ts`).
+- O estoque é sorteado no início da run e **renova depois de cada chefe**. O DD v2 também previa renovar a cada saga; no MVP há uma saga só.
+- O título Colecionador (−5% nos preços) existe nos dados, oculto até a F2 (C14).
+
+**Estoque por rank [F2]** — **Estado:** Futuro (F2/F3)
+
+O rank ninja define a qualidade do estoque: Genin vê itens de grau D e C; Chunin passa a ver grau B; Jounin, grau A. Itens S só aparecem como recompensa rara. No MVP todo personagem é Genin, e o estoque é o de graus D e C acima.
+
+### Categorias de itens
+
+**1. Equipamentos** — **Estado:** Parcial (MVP). Bônus passivos leves, em dois slots, **Arma** e **Armadura**. A Kunai é a arma rápida (Velocidade e crítico); a Katana, a pesada (Taijutsu). A arma entra no Atacar pelos atributos que dá, e não por um modificador próprio. Os coletes dão Defesa e, no grau C, um pouco de HP. A troca é feita fora da batalha, na Preparação, e o HP e o chakra atuais acompanham a mudança do máximo (`equipItem`). Os slots Bandana, Luvas, Calça, Botas e Pergaminho são visão (Seção 13).
+
+**2. Consumíveis** — **Estado:** Implementado (MVP). Kit médico, Pílula de chakra e Pergaminho de Reforço; usar um gasta a ação do turno. Também saem da escolha 1-de-3 ao subir de nível (Seção 15).
+
+**3. Pergaminho Raro** — **Estado:** Implementado (MVP).
+
+- Dá **+1** no atributo **base** escolhido. O DD v2 dizia "+1 ou +2" sem regra para decidir; o código fixou +1 (`ASSUMIDO`, `useRareScroll` em `src/game/run/shop.ts`).
+- Por ser atributo base, **ajuda a desbloquear jutsus** (Seção 3): aplicar um pergaminho roda o desbloqueio.
+- Limite de 5 <!-- fact: BALANCE.shop.rareScrollMaxPerRun=5 --> por run, para o ganho permanente nunca ficar exponencial.
+- "Raro" não é um grau da escala D a S: nos dados o pergaminho usa `S` só para ordenação, e a interface mostra "Raro".
+- O DD v2 previa que ele também caísse de chefes; no MVP só a loja o vende [F2].
+
+### Princípio de balanceamento
+
+Equipamentos e pergaminhos são complemento, não a fonte principal de poder: a soma dos bônus de itens deve ficar em até cerca de **15% do total de pontos de atributo** do personagem (no nível 9, cerca de 16 pontos). O equipamento mais caro do MVP dá 8 pontos (Colete reforçado). O buff do título ativo é pequeno e único (Seção 14).
+
+### Ao morrer
+
+Ryo, reputação, equipamento, itens e maestria da run se perdem junto com ela. O que persiste entre runs está na Seção 15.
+
+**Fica de fora do MVP (spec §1):** loja por rank, itens de grau B ou acima, Pergaminho Raro como recompensa de chefe, loja ambulante (evento entre encontros) e os slots de equipamento além de Arma e Armadura.
+
+---
+
+## 12. Modo História
+
+**Estado:** Parcial (MVP)
+
+O Modo História é o modo principal do jogo e segue a cronologia do anime, saga por saga. O MVP tem uma saga, a da Onda, completa. **A história avança por encontros, não por nível**: cada saga é uma sequência fixa de encontros, e o nível de história de cada um define a força do inimigo (Seção 9). A regra antiga, "chefe a cada 5 níveis", saiu ainda no DD v2, porque conflitava com a posição de Haku na saga.
+
+### Estrutura de saga
+
+**Estado:** Implementado (MVP)
+
+- Uma saga é um dado (`SagaDef` em `src/data/saga.ts`): o nome, o ponto da história em que começa e a lista ordenada de nós. Cada nó tem o tipo (comum ou chefe), o nível de história, o pool de inimigos comuns ou o chefe fixo, a marca de Acampamento antes dele e, quando houver, o ponto da história para onde vencê-lo leva.
+- Os jutsus cuja saga mínima é um dado ponto ficam aprendíveis quando a run chega lá (Seção 8). Vencer Zabuza leva a "Onda depois de Zabuza" e libera o Suiryuudan.
+- No design, a saga também escolhe o cenário e a paleta da arena. No MVP, a arena é única e de placeholders [F2].
+- **Duração-alvo:** 26 encontros, cerca de 25 a 35 minutos por run.
+
+### Saga da Onda [F1A]
+
+**Estado:** Implementado (MVP)
+
+| Encontros | Nível de história | Conteúdo | Chefe |
+|---|---|---|---|
+| 1 a 3 | 1 | Bandido ou Ninja Renegado (grau D) | — |
+| 4 a 6 | 2 | idem | — |
+| 7 a 9 | 3 | idem | — |
+| 10 a 12 | 4 | idem | — |
+| **13** | 5 | Acampamento antes da luta | **Zabuza Momochi (grau C)** |
+| 14 a 16 | 6 | Mercenário da Névoa ou Ninja Renegado (grau D) | — |
+| 17 a 19 | 7 | idem | — |
+| 20 a 22 | 8 | idem | — |
+| 23 a 25 | 9 | idem | — |
+| **26** | 10 | Acampamento antes da luta | **Haku (grau B)** |
+
+Regra de ritmo: **três encontros comuns equivalem a um nível** (`buildOndaNodes` em `src/data/saga.ts`). Vencer Haku conclui a saga e encerra a run com vitória.
+
+**Elites (C8).** Em cada run, 3 <!-- fact: BALANCE.run.eliteForks=3 --> nós comuns são sorteados como **bifurcação "Comum ou Elite"**: o mapa oferece lutar contra o comum ou contra a variante D+ dele (o Bandido vira Bandido Veterano, e assim por diante), mais forte e mais recompensadora. A bifurcação nunca cai no nó imediatamente antes de um Acampamento (`ASSUMIDO` da spec §7, `buildRunNodes` em `src/game/run/runManager.ts`). A elite **substitui** o comum, e por isso não leva a reputação a 1000 (C8, Seção 4). A "missão de grau D" opcional entra na F2, junto com a promoção.
+
+### Variação entre runs
+
+**Estado:** Parcial (MVP)
+
+Para a saga não ser sempre idêntica:
+
+- **Comuns sorteados:** o inimigo de cada nó comum sai do pool do nó, e as bifurcações de elite mudam de lugar. Os chefes ficam sempre fixos. A semente da run decide tudo, e a mesma semente repete a mesma saga.
+- **Escolha 1-de-3 ao subir de nível [F1B]:** implementada, com as opções kit médico, pílula de chakra, Pergaminho de Reforço, ryo e treino (Seção 15). O DD v2 punha "um jutsu elegível novo" entre as opções; a **C12** o tirou, porque jutsu só se aprende cumprindo as condições de status.
+- **Eventos entre encontros [F1B]:** loja ambulante, treino, descanso. Ficam para depois.
+
+### Sagas futuras
+
+**Estado:** Futuro (F2/F3)
+
+Referência de planejamento, na ordem canônica:
+
+| Saga | Chefe ou marco de referência | Observação |
+|---|---|---|
+| Exame Chunin — Floresta da Morte e Preliminares | Orochimaru (aparição, não chefe obrigatório) | **Missão de Promoção a Chunin** (1000 de reputação); Chidori (treino de Kakashi) |
+| Exame Chunin — Finais e Invasão de Konoha | **Gaara** (grau A) | Na obra, Gaara é chefe aqui, e não na Recuperação do Kazekage |
+| Busca por Tsunade | Kabuto (menor) e Orochimaru | Rasengan e Kuchiyose no Jutsu |
+| Recuperação do Sasuke | Chefes do Som (grau B ou A) | Fim da Parte I |
+| Shippuden — Recuperação do Kazekage | Sasori e Deidara | Começa a Parte II; Gaara é o resgatado |
+| Shippuden — Perseguição a Itachi | Itachi | Amaterasu e Tsukuyomi |
+
+Os pontos da história dessas sagas já existem (`STORY_POINTS` em `src/game/types.ts`, nomes em `src/data/story.ts`), porque os jutsus futuros os usam como saga mínima na Enciclopédia. A regra de ouro se mantém: **nenhum inimigo ou jutsu aparece antes do ponto da história em que existe na obra**, com a exceção controlada da Herança de clã (Seção 8).
+
+### Modo Infinito
+
+**Estado:** Futuro (F2/F3)
+
+Um modo sem fim e sem amarras de cronologia: inimigos e jutsus de qualquer saga misturados, com a dificuldade escalando indefinidamente. No MVP existe só como entrada de menu desabilitada, "Modo Infinito (em breve)" (Seção 13).
+
+**Fica de fora do MVP (spec §1):** todas as sagas depois da Onda, a missão de grau D, os eventos entre encontros, cenário por saga e o Modo Infinito.
+
+---
+
+## 13. Interface e Experiência do Jogador
+
+**Estado:** Parcial (MVP)
+
+Menu, criação, mapa, batalha, resultado, Preparação, Ficha, Enciclopédia, Histórico, Títulos, fim da run e tela de erro estão no código (`src/ui-dom/screens/`). A tela de equipamento com silhueta, o Registro de Batalha e o Livro Bingo são visão.
+
+**Divisão técnica.** As telas de texto e tabela são **HTML/CSS** sobre o canvas, e o **Phaser** desenha só a arena da batalha (Seção 18). O canvas fica numa camada por baixo, e o loop do Phaser dorme fora da batalha para economizar CPU (`src/scenes/createGame.ts`).
+
+**Layout desktop.** A largura mínima da página é **1024 px** (`min-width` do `body` em `src/styles.css`); as telas DOM ficam centradas, com até 1280 px de largura. O Phaser trabalha numa resolução lógica de 1280 × 720 e se ajusta à janela com `Scale.FIT`, centrado nos dois eixos. Layout mobile, abaixo de 1024 px, fica fora do MVP. Toda cor da interface sai dos tokens de `src/styles.css`, e nenhuma informação é transmitida só por cor (spec §10): um botão apagado diz o motivo em texto.
+
+### Menu principal
+
+**Estado:** Implementado (MVP)
+
+| Opção | Função |
+|---|---|
+| **Continuar run** | Volta à run salva; desabilitado quando não há run em andamento |
+| **Modo História** | Leva à criação de personagem. Com uma run em andamento, pede confirmação: a run atual é encerrada e registrada no Histórico como abandonada |
+| **Modo Infinito** | "Em breve", desabilitado (Seção 12) |
+| **Enciclopédia de Jutsus** | O pool completo de jutsus, com categoria, grau, requisitos e o marcador de desbloqueado ou bloqueado; filtros por categoria e situação; jutsus já levados à maestria +5 recebem o selo "★ Maestria +5" (`src/ui-dom/screens/EncyclopediaScreen.ts`) |
+| **Histórico de Runs** | Seção 16 |
+| **Títulos** | A coleção de títulos (Seção 14) |
+| **Livro Bingo** [F2] | Registro permanente de inimigos (Seção 14) |
+
+A Enciclopédia é a única tela que mostra o pool completo, independentemente do clã da run; "desbloqueado" é permanente e conta qualquer jutsu aprendido em qualquer run.
+
+### Tela de batalha
+
+**Estado:** Implementado (MVP)
+
+Jogador à esquerda e inimigo à direita, frente a frente (`src/ui-dom/screens/BattleScreen.ts` e `src/scenes/BattleScene.ts`):
+
+- **Arena (Phaser):** placeholders de forma e nome, nunca arte oficial. O Phaser só anima os eventos que o motor emite: avanço de quem age, número de dano, "CRÍTICO!", "ESQUIVOU", tremor e cor do elemento no alvo, cura, nome do efeito aplicado e a aura da transformação.
+- **Painel de cada lado (DOM):** nome, nível, o badge de grau e o de chefe no inimigo (C11), **Poder Ninja**, barras de **HP** e **chakra**, os indicadores de **chance de crítico**, **redução de dano** e **esquiva** (valores efetivos, já com equipamento, título e efeitos) e a fileira de efeitos ativos com os turnos restantes e a descrição ao passar o mouse (Seção 10).
+- **Centro:** indicador de turno ("Seu turno", "Turno do inimigo", "Resolvendo..." durante as animações e o aviso de Ilusão) e o **log de batalha**, uma lista rolável com cores distintas para jogador, inimigo, dano, cura, efeitos e sistema.
+- **Barra de ações (C10):** Atacar, Defender, Meditar, Item, Transformar (só para quem tem transformação) e os **4 jutsus equipados**, cada um com o número do atalho, o custo de chakra e o nível de maestria. Jutsu sem chakra ou bloqueado pela Ilusão aparece apagado **com o motivo escrito**. Clicar num jutsu mostra a descrição com o botão Usar; clicar de novo confirma. Item abre a lista de consumíveis; o Pergaminho de Reforço pede o atributo.
+- **Ficha:** o painel do jogador tem o botão da Ficha, em modo somente leitura e sem gastar turno; ele fica desabilitado durante as animações. O DD v2 previa o botão nos dois lados; a ficha do inimigo entra com o Livro Bingo [F2].
+- **Entrada travada** enquanto as animações rodam, com um atraso curto no turno do inimigo, para que o jogador acompanhe o que aconteceu.
+- **Sem cronômetro de turno:** limite de tempo só faz sentido no PvP futuro (Seção 17).
+
+**Atalhos de teclado** (`battleKeys` em `src/ui-dom/screens/BattleScreen.ts`), que usam a mesma regra de bloqueio dos botões: um atalho de botão apagado é ignorado.
+
+| Tecla | Ação |
+|---|---|
+| `1`–`4` | Seleciona o jutsu do slot; a mesma tecla de novo confirma |
+| `Enter` | Confirma o jutsu selecionado |
+| `A` | Atacar |
+| `D` | Defender |
+| `M` | Meditar |
+| `I` | Abre ou fecha a lista de itens |
+| `T` | Liga ou desliga a transformação |
+| `Esc` | Fecha a descrição do jutsu ou a lista de itens; **nunca** sai da batalha |
+
+Uma tecla segurada não repete a ação. Com um diálogo aberto, `Esc` fecha o diálogo, em qualquer tela.
+
+### Mapa, resultado e Preparação
+
+**Estado:** Implementado (MVP)
+
+- **Mapa da saga** (`src/ui-dom/screens/MapScreen.ts`): os 26 nós em grade, com os vencidos, o atual e os chefes marcados por texto e borda, e o Acampamento (⛺) antes de cada chefe, com o botão Descansar. O próximo encontro mostra o inimigo e o grau e, nas bifurcações, o botão "Enfrentar elite" com a explicação da elite. Dali o jogador abre a Preparação, a Ficha ou salva e volta ao menu.
+- **Resultado da batalha** (`src/ui-dom/screens/ResultScreen.ts`): XP, ryo e reputação ganhos, subida de nível, jutsus aprendidos, distribuição de pontos (com o botão "Distribuir pelo preset", C9), as metas "faltam X para *jutsu*" e as escolhas 1-de-3 pendentes, que precisam ser resolvidas antes de seguir.
+- **Preparação** (`src/ui-dom/screens/PrepScreen.ts`): abas **Loja**, **Jutsus**, **Equipamento** e **Atributos**. A loja lista o estoque por categoria, com preço, descrição e efeito. A aba Jutsus mostra os slots do rank (4 no Genin) e o repertório, com maestria e barra de progresso; é nela que se trocam os jutsus equipados. Quando o jogador aprende um jutsu com os 4 slots ocupados, um diálogo pergunta qual sai ou se o novo fica só no repertório (`src/ui-dom/components/swap.ts`).
+- **Criação de personagem** (`src/ui-dom/screens/CreateScreen.ts`): nome, clã, afinidade, título inicial, presets e a prévia ao vivo dos valores derivados e dos jutsus liberados (Seção 5). O preview visual do personagem fica para quando houver arte.
+- **Fim da run** (`src/ui-dom/screens/RunEndScreen.ts`): vitória, morte ou abandono, com o texto do Histórico, as estatísticas da run e os títulos conquistados.
+- **Erro** (`src/ui-dom/screens/ErrorScreen.ts`): qualquer exceção no render, no motor ou na animação leva a uma tela com o botão Recarregar, e o jogador nunca fica preso (`docs/ANALISE.md` §5).
+
+### Tela de equipamento com silhueta [F1B]
+
+**Estado:** Futuro (F2/F3)
+
+No MVP, o equipamento é uma lista simples na Preparação e na Ficha. O design continua sendo o de um inventário **só de equipamentos**, com a **silhueta do ninja** no centro e os slots ao redor, ligados por linhas a etiquetas com o item equipado. Os slots planejados são Bandana, Luvas, Calça, Botas e Pergaminho, além de Arma e Armadura; slots que ainda não existem não aparecem, e os vazios ficam escurecidos com o contorno do tipo de item. Ao selecionar um slot, a tela mostra o item (nome, grau, bônus e descrição) e os equipamentos do mesmo tipo que o jogador tem, com a comparação de bônus antes de trocar (verde para melhora, vermelho para piora, sempre com o número escrito ao lado).
+
+**Fica de fora do MVP (spec §1):** layout mobile abaixo de 1024 px, sprites e áudio, tela de equipamento com silhueta, Registro de Batalha, Livro Bingo e cronômetro de turno.
+
+---
+
+## 14. Ficha do Ninja (Sumário)
+
+**Estado:** Parcial (MVP)
+
+A Ficha é a tela de consulta inspirada no Sumário do Pokémon: reúne tudo sobre o personagem em **abas**, com leitura rápida (`src/ui-dom/screens/SheetScreen.ts`). Ela é **sempre somente leitura**: abre do mapa, da tela de resultado e da batalha, sem gastar turno; distribuir pontos e trocar jutsus ou equipamento são ações da tela de resultado e da Preparação. O MVP tem as abas Perfil, Atributos, Jutsus e Equipamento; Registro de Batalha e Títulos, como abas da Ficha, ficam para depois.
+
+### Aba 1 — Perfil
+
+**Estado:** Implementado (MVP)
+
+Nome, clã, afinidade, nível com a barra de XP até o próximo, **Poder Ninja** (Seção 3), **estilo de luta**, reputação, título ativo com o buff, ryo, encontro atual ("n de 26") e ponto da história. O estilo de luta é um rótulo só informativo, calculado sobre os pontos investidos acima do valor inicial: se um atributo concentra pelo menos 30% deles, sem empate, o rótulo é o dele (Especialista em Ninjutsu, Lutador de Taijutsu, Ilusionista para Genjutsu, Estrategista para Inteligência, Muralha para HP ou Defesa, Ágil para Velocidade ou crítico); senão, Equilibrado (`fightingStyle` em `src/ui-dom/view/derived.ts`). O rank e a barra de reputação até o próximo rank entram com a promoção [F2]; o retrato, com a arte; o tempo de run não é medido.
+
+### Aba 2 — Atributos
+
+**Estado:** Implementado (MVP)
+
+- Os 8 atributos com **valor base e valor efetivo** lado a lado (Seção 3). Na Ficha, o efetivo é base mais equipamento; os efeitos de batalha aparecem nos indicadores do painel de batalha.
+- **Gráfico octogonal** (radar SVG de 8 pontas) com o formato da build: o contorno tracejado é o base, a área preenchida é o efetivo (`radarSvg` em `src/ui-dom/components/radar.ts`).
+- HP e chakra atual e máximo, e os valores derivados em porcentagem: chance de crítico, esquiva com Velocidades iguais e redução de dano.
+- As metas "faltam X pontos para Y" dos jutsus relevantes para a run (Seção 8).
+- O detalhamento de onde vem cada bônus (clã, Pergaminhos Raros, equipamento, efeitos) fica para depois [F1B].
+
+### Aba 3 — Jutsus
+
+**Estado:** Implementado (MVP)
+
+Os jutsus aprendidos, com a marca dos equipados. Cada um mostra grau, elemento, custo de chakra já com todos os descontos, maestria com a barra de progresso até o próximo nível, **onde foi aprendido** ("aprendido no nível X, encontro Y"), quantas vezes foi usado na run e a descrição. O dano total por jutsu não é registrado.
+
+### Aba 4 — Equipamento
+
+**Estado:** Implementado (MVP)
+
+Arma e Armadura equipadas com os bônus, os consumíveis do inventário e os Pergaminhos Raros aplicados (por exemplo, "2/5"). A silhueta é a da tela de equipamento futura (Seção 13).
+
+### Aba 5 — Registro de Batalha
+
+**Estado:** Futuro (F2/F3)
+
+Estatísticas da run com um alternador "Esta run / Total": inimigos derrotados por grau, elites e chefes, a lista de inimigos derrotados agrupada por tipo, dano causado e sofrido, maior golpe, críticos, jutsu mais usado, turnos, chakra gasto, ryo ganho e gasto, itens usados e vitórias sem sofrer dano. O motor **já coleta** todos esses números (`RunStats` em `src/game/meta/stats.ts`); no MVP eles aparecem de forma simples na tela de fim da run e no Histórico (Seção 16), e os totais vitalícios no topo do Histórico.
+
+### Aba 6 — Títulos
+
+**Estado:** Implementado (MVP)
+
+Os títulos são conquistas permanentes que dão um **pequeno buff** durante a run. No MVP eles têm uma tela própria no menu (`src/ui-dom/screens/TitlesScreen.ts`), e não uma aba da Ficha; o título ativo aparece no Perfil.
+
+**Como funciona**
+
+- Cada título tem uma condição de conquista, descrita como **dado** (`src/data/titles.ts`). Cumprida, ele fica desbloqueado para sempre. A conferência acontece uma vez, no fim de cada run (Seção 15).
+- Na criação de personagem, o jogador escolhe **um** título já desbloqueado para usar na run, ou nenhum; pode trocar a cada run.
+- O buff vale a run inteira como modificador passivo do personagem (Seção 10).
+- Na tela de Títulos, os ainda não conquistados aparecem como "???" com a dica da condição, reforçando a sensação de coleção.
+
+**Regras de balanceamento**
+
+- Buffs pequenos (de 2% a 6%) e um único título ativo, sem acúmulo.
+- O buff de título **nunca altera atributo base**: só modificadores de combate e de economia (dano por elemento, custo de chakra, esquiva, crítico, redução, ryo, reputação, preço). Assim ele não abre jutsus (Seção 3).
+
+**Títulos de domínio elemental**
+
+A linha de cada elemento tem três títulos. Cada jutsu **diferente** daquele elemento levado à maestria +5, em qualquer run, conta para a linha. No código, cada nível é um título próprio, desbloqueado pela contagem, e o jogador pode escolher qualquer um dos que já tem; o DD v2 descrevia um título único que sobe de nível.
+
+| Nível | Título (Fogo) | Condição | Buff |
+|---|---|---|---|
+| 1 | Iniciante do Fogo | Maestria +5 em 1 jutsu de Fogo | +2% de dano em jutsus de Fogo |
+| 2 | Adepto do Fogo | Maestria +5 em 2 jutsus de Fogo diferentes | +4% de dano em jutsus de Fogo |
+| 3 | Mestre do Fogo | Maestria +5 em 3 jutsus de Fogo diferentes | +6% de dano em jutsus de Fogo |
+
+A mesma estrutura vale para Água, Vento e Terra. A linha do Raio existe nos dados, oculta até a F2. As linhas por categoria (Taijutsu, Genjutsu, Fuinjutsu) são ideia em aberto (Apêndice D).
+
+**Títulos de feito**
+
+| Título | Condição | Buff | No MVP |
+|---|---|---|---|
+| Demônio da Névoa | Derrotar Zabuza Momochi | +3% de esquiva | Visível |
+| Caçador de Bandidos | Derrotar 30 inimigos de grau D, somando todas as runs (`ASSUMIDO`: numa run só há 24 comuns) | +5% de ryo recebido | Visível |
+| Sem um Arranhão | Vencer um chefe sem sofrer dano | +2% de redução de dano | Visível |
+| Por um Fio | Vencer um chefe com menos de 10% do HP (limite guardado na condição do título) | +3% de crítico | Visível |
+| Mestre de Jutsus | Ter 10 jutsus aprendidos na mesma run | −3% de custo de chakra | Visível |
+| Colecionador | Aplicar 5 Pergaminhos Raros na mesma run | −5% de preço na loja | Oculto até a F2 (C14) |
+| Novo Chunin | Ser promovido a Chunin | +5% de reputação recebida | Oculto até a F2 (C14) |
+
+No MVP são 17 títulos visíveis: os 5 de feito e as linhas de Fogo, Vento, Terra e Água.
+
+**Títulos exclusivos [Futuro]:** o formato de dado (id, nome, condição, buff e a marca de oculto) permite títulos de evento, criados pelo desenvolvedor, sem código novo.
+
+### Livro Bingo
+
+**Estado:** Futuro (F2/F3)
+
+O registro **permanente** de inimigos, de todas as runs, inspirado no Livro Bingo da série, no menu principal como a Enciclopédia. Uma página por inimigo já encontrado: nome, grau, saga, elemento, jutsus que usa, quantas vezes foi derrotado e quantas vezes derrotou o jogador, e a recompensa em ryo. Inimigos ainda não encontrados aparecem como silhueta "???". Só o **nome** faz referência à série; a arte é sempre original. A meta já guarda quantas vezes cada chefe foi derrotado (`lifetime.bossesDefeated` em `src/game/meta/meta.ts`).
+
+### Ideias adicionais
+
+**Estado:** Futuro (F2/F3)
+
+- **Linha do tempo da run:** marcos em ordem (primeira vitória, subidas de nível, promoção, chefes, Pergaminhos Raros).
+- **Informação do inimigo revelada aos poucos:** o Livro Bingo preenche mais detalhes a cada derrota do inimigo; Byakugan, Sharingan ou Inteligência alta poderiam revelar mais durante a batalha.
+- **Aba de rival**, quando o sistema de rival existir (F2).
+- **Cartão do Ninja exportável:** a Ficha como imagem para compartilhar.
+
+### Como funciona por baixo
+
+**Estado:** Implementado (MVP)
+
+Nada disso exige que o motor conheça a interface. O motor emite **eventos** (dano causado, jutsu usado, inimigo derrotado, chefe vencido) e um rastreador de estatísticas os contabiliza (`trackBattleEvents` e `trackEncounterEnd` em `src/game/meta/stats.ts`). A Ficha, os títulos, o fim da run e o Histórico só leem esses números.
+
+**Fica de fora do MVP (spec §1):** as abas Registro de Batalha e Títulos dentro da Ficha, a tela de equipamento com silhueta, o Livro Bingo, a aba de rival e o Cartão do Ninja.
+
+---
+
+## 15. Progressão do Personagem e Meta-Progressão
+
+**Estado:** Parcial (MVP)
+
+### Dentro da run
+
+**Estado:** Implementado (MVP)
+
+- O nível sobe por experiência de batalha: do nível L para o L+1 são `24 + 12·L` de XP (base 24 <!-- fact: BALANCE.xp.toNextBase=24 -->, 12 <!-- fact: BALANCE.xp.toNextPerLevel=12 --> por nível), com o XP de cada encontro da Seção 11. Cada nível dá **5 pontos livres** e **+1 automático em cada um dos dois atributos de destaque** do clã, ou 6 pontos livres no Sem clã (Seção 3), e cura 25% do HP máximo (Seção 9). Pontos não distribuídos ficam guardados para depois.
+- **Escolha 1-de-3 a cada nível ganho [F1B]:** o jogo sorteia 3 de 5 opções (`rollRewardChoices` em `src/game/run/runManager.ts`): Kit médico, Pílula de chakra, Pergaminho de Reforço, Bolsa de ryo (+60 ryo) ou Treino (+4 <!-- fact: BALANCE.shop.trainingUses=4 --> usos de maestria num jutsu equipado; só aparece com algum jutsu equipado). Nunca um jutsu (C12). Com vários níveis de uma vez, as escolhas se resolvem em ordem; as que estiverem pendentes quando a run termina são descartadas.
+- Os jutsus são aprendidos automaticamente ao cumprir atributo base, clã, saga e pré-requisito (Seção 8).
+- A reputação sobe a cada vitória; a missão de promoção que ela libera entra na F2 (Seção 4).
+- O ryo é ganho nos encontros e na escolha 1-de-3 e gasto na loja (Seção 11).
+- A run é salva automaticamente no fim de cada encontro, no Acampamento e a cada compra ou troca na Preparação (spec §11, Seção 18).
+
+### Entre runs (meta-progressão)
+
+**Estado:** Parcial (MVP)
+
+A meta é atualizada **uma vez, no fim da run** (morte, vitória ou abandono), por `recordRunEnd` em `src/game/meta/meta.ts`. Chamá-la de novo com a mesma run não duplica nada, e uma run encerrada que ficou salva é finalizada no próximo boot (`docs/ANALISE.md` §5).
+
+- **Coleção de jutsus (Enciclopédia)** [F1A] — implementada: todo jutsu aprendido em qualquer run fica "Desbloqueado" para sempre.
+- **Maestria máxima por jutsu** — implementada: os jutsus que chegaram ao +5 em alguma run ficam registrados (selo na Enciclopédia e títulos de domínio elemental). A maestria em si recomeça a cada run (Seção 8).
+- **Títulos** [F1B] — implementados: permanentes, um ativo por run (Seção 14). A **C14** escondeu os dois que o MVP não permite cumprir: Colecionador exige 5 Pergaminhos Raros, 4500 ryo contra os cerca de 1220 que a saga rende, e Novo Chunin exige uma promoção que só existe na F2. Os dois estão nos dados, com condição e buff, marcados como ocultos.
+- **Estatísticas vitalícias** — implementadas: runs jogadas, vitórias, inimigos derrotados por grau e chefes derrotados, mostradas no topo do Histórico.
+- **Histórico de runs** [F1B] — implementado (Seção 16).
+- **Desbloqueio de clãs** [F2]: novos clãs jogáveis liberados por conquistas em runs anteriores.
+- **Pontos de Legado** [F2]: moeda persistente ganha no fim de cada run, proporcional ao progresso, gasta em melhorias passivas permanentes. Antes se chamava "Pontos de maestria"; o nome mudou para não colidir com a maestria de jutsu.
+- **Cosméticos** [F2]: aparências e efeitos visuais de jutsu.
+- **Livro Bingo** [F2] (Seção 14).
+
+Ryo, reputação, rank ninja, equipamento, itens e maestria dos jutsus são **da run** e se perdem no fim dela.
+
+**Fica de fora do MVP (spec §1):** Pontos de Legado, desbloqueio de clãs, cosméticos, Livro Bingo e os títulos Colecionador e Novo Chunin como conquistáveis.
+
+---
+
+## 16. Histórico de Runs
+
+**Estado:** Implementado (MVP)
+
+Uma tela do menu lista as runs anteriores, da mais recente para a mais antiga (`src/ui-dom/screens/HistoryScreen.ts`). No topo ficam os totais vitalícios (runs, vitórias, inimigos derrotados por grau e chefes derrotados). Cada entrada mostra:
+
+- Nome do personagem, resultado (morte, vitória ou abandono) e data.
+- Clã, afinidade, nível, reputação e quantidade de encontros vencidos.
+- O **texto do fim da run**, gerado por `runEndText` em `src/game/meta/meta.ts`: "Morreu na Saga da Onda, nível 4, para Mercenário da Névoa", "Concluiu a Saga da Onda no nível N" ou "Abandonou a run no encontro 8 de 26".
+- Um botão **Detalhes** que abre o retrato da run naquele momento: atributos base finais, jutsus aprendidos com a maestria de cada um, equipamento e as estatísticas principais (dano causado, maior golpe, críticos e turnos). A entrada guarda todas as estatísticas da run, para o Registro de Batalha futuro.
+
+O Histórico é persistido junto com a meta-progressão (Seção 15) e guarda as 50 <!-- fact: BALANCE.history.maxEntries=50 --> runs mais recentes; as mais antigas saem da lista, e os totais vitalícios continuam somando todas. A leitura tolera entradas com campos ausentes ou inválidos, que aparecem como desconhecidos em vez de quebrar a tela. O Histórico é ao mesmo tempo registro pessoal e gancho de rejogabilidade ("dessa vez eu passo do Zabuza").
+
+**Diferenças em relação ao DD v2.** O rank ninja não aparece na entrada, porque todo personagem é Genin no MVP; a saga aparece no texto do fim da run, e não num campo próprio. O DD v2 pedia um snapshot da Ficha inteira; o MVP mostra o resumo acima, e a Ficha completa de uma run passada fica para depois.
+
+**Fica de fora do MVP (spec §1):** rank ninja na entrada (F2) e a Ficha completa de runs passadas.
