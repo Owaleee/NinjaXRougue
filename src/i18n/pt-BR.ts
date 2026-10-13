@@ -86,6 +86,7 @@ export const PT_BR = {
   'log.meditate': '{who} medita (+{chakra} chakra).',
   'log.item': '{who} usa {item}.',
   'log.effectOn': '{target}: {effect} ({turns} turnos).',
+  'log.effectOnOne': '{target}: {effect} (1 turno).',
   'log.effectOnSustained': '{target}: {effect} (sustentado ∞).',
   'log.resisted': '{target} resiste a {effect}.',
   'log.resistedTenacity': '{target} está imune a controle (Tenacidade): {effect} falhou.',

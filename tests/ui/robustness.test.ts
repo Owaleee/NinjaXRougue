@@ -34,6 +34,23 @@ describe('Robustez — erro de render', () => {
     expect(root.textContent).toContain('Recarregar o jogo');
   });
 
+  it('render que quebra fora da batalha: a ErrorScreen não é sobrescrita pela tela de batalha', () => {
+    const { store } = scenario();
+    store.onBattleEvents(() => {});
+    let broken = false;
+    mountWith(store, {
+      map: (ctx) => {
+        if (broken) throw new Error('mapa quebrou');
+        return SCREENS.map!(ctx);
+      },
+    });
+    expect(store.state.screen).toBe('map');
+    broken = true; // o render do mapa só quebra no re-render disparado pelo passo
+    store.fight();
+    expect(store.state.screen).toBe('error');
+    expect(store.state.locked).toBe(false);
+  });
+
   it('ErrorScreen que também lança não derruba o App', () => {
     const { store } = scenario();
     const root = mountWith(store, {

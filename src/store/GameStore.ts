@@ -372,6 +372,11 @@ export class GameStore {
     }
   }
 
+  /** Em método à parte para o TS não estreitar `this.s.screen` entre as chamadas a `set()`. */
+  private isError(): boolean {
+    return this.s.screen === 'error';
+  }
+
   private warnSaveFailed(): void {
     const text = t('notice.saveFailed');
     if (!this.s.notices.some((n) => n.text === text)) this.notify('error', text);
@@ -467,9 +472,11 @@ export class GameStore {
     });
 
     if (animate) {
+      // Se o render do passo acima já levou o jogo à tela de erro, ela não pode ser sobrescrita.
+      if (this.isError()) return true;
       // A batalha precisa estar na tela para ser animada; sair dela espera a animação.
       if (this.s.screen !== 'battle') this.set({ screen: 'battle', history: [] });
-      if (this.s.screen === 'error') return true;
+      if (this.isError()) return true;
       this.deferredNav = run.phase !== 'battle';
       let failed = false;
       for (const fnA of Array.from(this.animators)) {

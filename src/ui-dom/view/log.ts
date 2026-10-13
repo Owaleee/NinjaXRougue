@@ -62,7 +62,11 @@ export function formatEvent(e: GameEvent, names: Record<string, string>): LogLin
         text:
           e.remaining === null
             ? t('log.effectOnSustained', { target: n(e.targetId), effect: effectName(e.effectId) })
-            : t('log.effectOn', { target: n(e.targetId), effect: effectName(e.effectId), turns: e.remaining }),
+            : t(e.remaining === 1 ? 'log.effectOnOne' : 'log.effectOn', {
+                target: n(e.targetId),
+                effect: effectName(e.effectId),
+                turns: e.remaining,
+              }),
       };
     case 'effectResisted':
       return {

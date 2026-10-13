@@ -18,6 +18,15 @@ describe('log de batalha', () => {
     expect(formatEvent({ ...base, elementMult: 0.8 }, names)?.text).toContain('desvantagem elemental');
   });
 
+  it('efeito com 1 turno restante usa o singular', () => {
+    expect(formatEvent({ type: 'effectApplied', targetId: 'enemy:bandido', effectId: 'queimadura', remaining: 1 }, names)?.text).toBe(
+      'Bandido: Queimadura (1 turno).',
+    );
+    expect(formatEvent({ type: 'effectApplied', targetId: 'enemy:bandido', effectId: 'queimadura', remaining: 2 }, names)?.text).toBe(
+      'Bandido: Queimadura (2 turnos).',
+    );
+  });
+
   it('usa os nomes de conteúdo dos dados', () => {
     expect(formatEvent({ type: 'jutsuUsed', actorId: 'player', jutsuId: 'henge', cost: 6 }, names)).toEqual({
       kind: 'player',
