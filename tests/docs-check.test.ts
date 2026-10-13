@@ -47,6 +47,9 @@ describe('verificador de documentos', () => {
     // "todo"/"toda" são palavras comuns em português: só o marcador em maiúsculas conta.
     expect(forbiddenMarkers('todo jogador e toda run terminam em derrota ou vitória')).toEqual([]);
     expect(forbiddenMarkers('Isso fica A DEFINIR depois')).toEqual(['Isso fica A DEFINIR depois']);
+    // "a definir" só conta como palavra inteira ("deveria definir" é português normal).
+    expect(forbiddenMarkers('o plano deveria definir o limite')).toEqual([]);
+    expect(forbiddenMarkers('limite: a definir')).toEqual(['limite: a definir']);
   });
 
   it('confere fatos numéricos contra o código', () => {
