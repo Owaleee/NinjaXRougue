@@ -29,4 +29,21 @@ export const DOC_SPECS: DocSpec[] = [
   { path: 'docs/curso/beta-0.9.1.md', headings: ['Beta 0.9.1 — Telas', ...COURSE_HEADINGS], course: true },
   { path: 'docs/curso/beta-0.9.2.md', headings: ['Beta 0.9.2 — Batalha em Phaser', ...COURSE_HEADINGS], course: true, minFacts: 1 },
   { path: 'docs/curso/1.0.md', headings: ['1.0 — Robustez, calibração e entrega', ...COURSE_HEADINGS], course: true, minFacts: 1 },
+  {
+    path: 'docs/DESIGN.md',
+    headings: [
+      'NarutoTxGame — Documento de Design v3',
+      'Sumário',
+      '1. Visão Geral do Projeto',
+      '2. Pilares do Design',
+      '3. Sistema de Atributos e Fórmulas de Base',
+      '4. Rank Ninja e Reputação',
+      '5. Criação de Personagem',
+      '6. Sistema de Clãs',
+      '7. Sistema de Chakra e Elementos',
+      '8. Sistema de Jutsus e Progressão',
+    ],
+    minFacts: 10,
+    minStateLines: 8,
+  },
 ];
