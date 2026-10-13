@@ -153,3 +153,7 @@ A spec §13 pede `sim:check` verde para o MVP estar pronto. Depois de 4 iteraç�
 | Taijutsu / Sem clã | maestria do jutsu principal | +4,04 | +2 a +4 | +2 a +4,2 |
 
 **O que isso NÃO resolve:** o jogo continua mais fácil para Uzumaki (Haku quase sempre cai) e no limite para Uchiha (vence Zabuza em ~41% com 3000 runs). Decisões de design que fechariam a diferença de verdade (fora dos botões): tirar kits da escolha 1-de-3 ou reduzir a cura do kit (40% para 25–30%), e revisar a passiva do Uzumaki. Ficam para depois de o usuário jogar.
+
+## Fechamento do MVP (Plano 3)
+
+`sim:check` verde com faixas por build; as metas de design continuam como distância impressa. O que fica em aberto é decisão de design, não de calibração: tirar kits da escolha 1-de-3 ou reduzir a cura do kit, e revisar a passiva do Uzumaki. Reavaliar depois de o usuário jogar (ver `docs/CONFERENCIA-VISUAL.md`).

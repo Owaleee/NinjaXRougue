@@ -64,4 +64,8 @@ export const DOC_SPECS: DocSpec[] = [
     minFacts: 30,
     minStateLines: 21,
   },
+  {
+    path: 'docs/CONFERENCIA-VISUAL.md',
+    headings: ['Conferência visual no navegador', 'Como abrir', 'Roteiro', 'O que anotar'],
+  },
 ];
