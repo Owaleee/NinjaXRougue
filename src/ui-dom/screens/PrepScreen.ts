@@ -7,6 +7,7 @@ import { playerToCombatant } from '../../game/run/battleSetup';
 import { priceOf } from '../../game/run/shop';
 import type { RunState } from '../../game/run/types';
 import { ATTR_KEYS } from '../../game/types';
+import { ITEM_ICON } from '../../data/art';
 import { ITEMS } from '../../data/items';
 import { JUTSUS } from '../../data/jutsus';
 import { num, t, type I18nKey } from '../../i18n/pt-BR';
@@ -14,7 +15,7 @@ import type { GameStore } from '../../store/GameStore';
 import { tabBar } from '../components/tabBar';
 import { allocationPanel } from '../components/allocation';
 import { runHeader } from '../components/runHeader';
-import { bar, button, h } from '../dom';
+import { bar, button, h, icon } from '../dom';
 import type { ScreenCtx, ScreenRenderer } from '../types';
 import { bonusText, compareText } from '../view/format';
 
@@ -54,7 +55,7 @@ function shopTab(store: GameStore, run: RunState): HTMLElement {
     return h(
       'tr',
       {},
-      h('td', {}, item.name, ' ', h('span', { class: 'badge' }, item.grade)),
+      h('td', {}, h('span', { class: 'with-icon' }, icon(ITEM_ICON[id], 'md'), item.name, h('span', { class: 'badge' }, item.grade))),
       h('td', { class: 'muted' }, item.description),
       h('td', {}, t('common.ryo', { n: num(price) })),
       h('td', {}, owned ? t('prep.owned') : count > 0 ? t('prep.have', { n: count }) : ''),

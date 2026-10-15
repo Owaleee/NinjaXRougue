@@ -1,7 +1,8 @@
+import { enemyArt } from '../../data/art';
 import { ENEMIES } from '../../data/enemies';
 import { t } from '../../i18n/pt-BR';
 import { runHeader } from '../components/runHeader';
-import { button, h } from '../dom';
+import { button, h, portrait } from '../dom';
 import type { ScreenRenderer } from '../types';
 
 /** Mapa da saga (spec §7 e §10): 26 nós, Acampamento antes dos chefes, bifurcação de elite. */
@@ -44,7 +45,9 @@ export const MapScreen: ScreenRenderer = (ctx) => {
     const elite = node.eliteEnemyId ? ENEMIES[node.eliteEnemyId] : undefined;
     current = h(
       'div',
-      { class: 'panel' },
+      { class: 'panel next-encounter' },
+      portrait(enemyArt(node.enemyId), 'portrait-card'),
+      h('div', { class: 'screen' },
       h('h2', {}, t('map.next', { n: node.index + 1, total: run.nodes.length })),
       h(
         'p',
@@ -60,6 +63,7 @@ export const MapScreen: ScreenRenderer = (ctx) => {
         elite ? button(t('map.fightElite', { name: elite.name }), () => store.fight(true)) : null,
       ),
       elite ? h('p', { class: 'muted' }, t('map.eliteInfo')) : null,
+      ),
     );
   }
 

@@ -2,6 +2,7 @@ import { ATTR_NAMES } from '../../game/attributes';
 import { getEnemy, getPlayer } from '../../game/combat/battle';
 import type { Action, BattleState } from '../../game/combat/types';
 import { EFFECTS, REFORCO_ATTRS } from '../../data/effects';
+import { ATTR_ICON, ELEMENT_ICON, ITEM_ICON, type IconArt } from '../../data/art';
 import { ITEMS } from '../../data/items';
 import { JUTSUS } from '../../data/jutsus';
 import { pct, t } from '../../i18n/pt-BR';
@@ -63,6 +64,14 @@ function basicBlock(b: BattleState, kind: BasicKind): 'illusion' | 'toggled' | '
   if (kind !== 'transform') return null;
   if (!getPlayer(b).transformationId) return 'noForm';
   return b.transformToggled ? 'toggled' : null;
+}
+
+/** Ícone do jutsu: o elemento, ou a categoria quando não tem elemento. */
+function jutsuIcon(id: string): IconArt | null {
+  const j = JUTSUS[id];
+  if (!j) return null;
+  if (j.element && ELEMENT_ICON[j.element]) return ELEMENT_ICON[j.element]!;
+  return j.category === 'taijutsu' ? 'soco' : j.category === 'genjutsu' ? 'olho' : j.category === 'fuinjutsu' ? 'pergaminho' : 'selo_maos';
 }
 
 /** Motivo visível de um jutsu apagado (spec §10: nunca só pela cor). */
@@ -144,10 +153,11 @@ export const BattleScreen: ScreenRenderer = (ctx) => {
   const pv = combatantView(p, e);
   const transformLabel = pv.transformed ? t('battle.transformOff', { form }) : t('battle.transformOn', { form });
   const basic = [
-    button(t('battle.attack'), () => doAct(ctx, { type: 'attack' }), { disabled: off('attack'), attrs: { 'data-action': 'attack' } }),
-    button(t('battle.defend'), () => doAct(ctx, { type: 'defend' }), { disabled: off('defend'), attrs: { 'data-action': 'defend' } }),
-    button(t('battle.meditate'), () => doAct(ctx, { type: 'meditate' }), { disabled: off('meditate'), attrs: { 'data-action': 'meditate' } }),
+    button(t('battle.attack'), () => doAct(ctx, { type: 'attack' }), { icon: 'soco', disabled: off('attack'), attrs: { 'data-action': 'attack' } }),
+    button(t('battle.defend'), () => doAct(ctx, { type: 'defend' }), { icon: 'escudo', disabled: off('defend'), attrs: { 'data-action': 'defend' } }),
+    button(t('battle.meditate'), () => doAct(ctx, { type: 'meditate' }), { icon: 'redemoinho_agua', disabled: off('meditate'), attrs: { 'data-action': 'meditate' } }),
     button(t('battle.item'), () => toggleItems(ctx), {
+      icon: 'bolsa',
       disabled: off('item'),
       attrs: { 'data-action': 'item', 'aria-expanded': String(ui.items) },
     }),
@@ -155,7 +165,7 @@ export const BattleScreen: ScreenRenderer = (ctx) => {
       ? button(
           basicBlock(battle, 'transform') === 'toggled' ? t('battle.withReason', { label: transformLabel, reason: t('battle.reason.toggled') }) : transformLabel,
           () => doAct(ctx, { type: 'transform' }),
-          { disabled: off('transform'), attrs: { 'data-action': 'transform' } },
+          { icon: 'olho', disabled: off('transform'), attrs: { 'data-action': 'transform' } },
         )
       : null,
   ];
@@ -167,6 +177,7 @@ export const BattleScreen: ScreenRenderer = (ctx) => {
     const withReason = reason ? t('battle.withReason', { label: base, reason }) : base;
     return button(isSel ? t('battle.selected', { label: withReason }) : withReason, () => pickJutsu(ctx, j.id), {
       class: `jutsu ${isSel ? 'primary' : ''}`,
+      icon: jutsuIcon(j.id),
       disabled: !live || reason !== null,
       title: j.description,
       attrs: { 'data-jutsu': j.id, 'aria-pressed': String(isSel) },
@@ -200,7 +211,7 @@ export const BattleScreen: ScreenRenderer = (ctx) => {
                   }
                   doAct(ctx, { type: 'item', itemId: id });
                 },
-                { disabled: !live },
+                { icon: ITEM_ICON[id] ?? null, disabled: !live },
               ),
             )
           : [h('span', { class: 'muted' }, t('battle.noItems'))]),
@@ -212,7 +223,7 @@ export const BattleScreen: ScreenRenderer = (ctx) => {
         { class: 'panel row' },
         h('span', {}, t('battle.reforcoPick')),
         ...REFORCO_ATTRS.map((a) =>
-          button(t('battle.reforcoAttr', { attr: ATTR_NAMES[a] }), () => doAct(ctx, { type: 'item', itemId: 'pergaminho_reforco', attr: a }), { disabled: !live }),
+          button(t('battle.reforcoAttr', { attr: ATTR_NAMES[a] }), () => doAct(ctx, { type: 'item', itemId: 'pergaminho_reforco', attr: a }), { icon: ATTR_ICON[a], disabled: !live }),
         ),
       )
     : null;

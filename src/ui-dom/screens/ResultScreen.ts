@@ -5,9 +5,18 @@ import { JUTSUS } from '../../data/jutsus';
 import { t, type I18nKey } from '../../i18n/pt-BR';
 import { allocationPanel } from '../components/allocation';
 import { runHeader } from '../components/runHeader';
+import type { IconArt } from '../../data/art';
 import { button, h } from '../dom';
 import type { ScreenRenderer } from '../types';
 import { jutsuGoals } from '../view/derived';
+
+const REWARD_ICON: Record<RewardOptionId, IconArt> = {
+  kit: 'cura',
+  pilula: 'pocao',
+  reforco: 'pergaminho',
+  ryo: 'bolsa',
+  treino: 'aumento_nivel',
+};
 
 const REWARD_TEXT: Record<RewardOptionId, { name: I18nKey; desc: I18nKey }> = {
   kit: { name: 'reward.kit.name', desc: 'reward.kit.desc' },
@@ -103,7 +112,7 @@ export const ResultScreen: ScreenRenderer = (ctx) => {
                   store.chooseReward(o);
                 },
                 // Só o Treino é um toggle; os outros cartões resolvem na hora.
-                { attrs: isTrain ? { 'data-reward': o, 'aria-pressed': String(training) } : { 'data-reward': o } },
+                { icon: REWARD_ICON[o], attrs: isTrain ? { 'data-reward': o, 'aria-pressed': String(training) } : { 'data-reward': o } },
               ),
               h('p', { class: 'muted' }, t(REWARD_TEXT[o].desc, { n: o === 'ryo' ? BALANCE.shop.rewardRyo : BALANCE.shop.trainingUses })),
             );

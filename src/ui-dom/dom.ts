@@ -4,6 +4,8 @@
  * REGRA DE SEGURANÇA: texto entra sempre como nó de texto (nunca innerHTML),
  * então um nome como "<img onerror=...>" aparece literal e não executa nada.
  */
+import { characterUrl, iconUrl, type CharacterArt, type IconArt } from '../data/art';
+
 export type Child = Node | string | number | null | undefined | false;
 
 export interface Props {
@@ -47,14 +49,26 @@ export function clear(el: Element): void {
 export function button(
   label: string,
   onClick: () => void,
-  opts: { primary?: boolean; disabled?: boolean; title?: string; class?: string; attrs?: Record<string, string> } = {},
+  opts: { primary?: boolean; disabled?: boolean; title?: string; class?: string; attrs?: Record<string, string>; icon?: IconArt | null } = {},
 ): HTMLButtonElement {
-  const cls = [opts.primary ? 'primary' : '', opts.class ?? ''].join(' ').trim();
+  const cls = [opts.primary ? 'primary' : '', opts.icon ? 'with-icon' : '', opts.class ?? ''].join(' ').trim();
   return h(
     'button',
     { type: 'button', class: cls, disabled: opts.disabled, title: opts.title, attrs: opts.attrs, on: { click: () => onClick() } },
+    opts.icon ? icon(opts.icon) : null,
     label,
   );
+}
+
+/** Ícone decorativo: o texto ao lado sempre diz o que é (alt vazio, fora do leitor de tela). */
+export function icon(name: IconArt | null | undefined, size: 'sm' | 'md' | 'lg' = 'sm'): HTMLImageElement | null {
+  if (!name) return null;
+  return h('img', { class: `icon icon-${size}`, attrs: { src: iconUrl(name), alt: '', 'aria-hidden': 'true', draggable: 'false' } });
+}
+
+/** Retrato de personagem (decorativo: o nome sempre aparece em texto ao lado). */
+export function portrait(art: CharacterArt, cls = ''): HTMLImageElement {
+  return h('img', { class: `portrait ${cls}`.trim(), attrs: { src: characterUrl(art), alt: '', 'aria-hidden': 'true', draggable: 'false' } });
 }
 
 /** Barra de HP/chakra/XP com o número em texto (não só a cor/largura). */

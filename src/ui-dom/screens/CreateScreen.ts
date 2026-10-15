@@ -2,11 +2,12 @@ import { emptyAttributes, sumAttributes } from '../../game/attributes';
 import { BALANCE } from '../../game/Balance';
 import { availableTitles } from '../../game/meta/meta';
 import type { Attributes, ClanId, Element } from '../../game/types';
+import { clanArt } from '../../data/art';
 import { CLANS, PLAYABLE_CLANS } from '../../data/clans';
 import { JUTSUS } from '../../data/jutsus';
 import { pct, t } from '../../i18n/pt-BR';
 import { allocationPanel } from '../components/allocation';
-import { button, clear, h } from '../dom';
+import { button, clear, h, portrait } from '../dom';
 import type { ScreenRenderer } from '../types';
 import { creationPreview } from '../view/derived';
 
@@ -66,7 +67,8 @@ export const CreateScreen: ScreenRenderer = (ctx) => {
   const clanCards = PLAYABLE_CLANS.map((id) =>
     h(
       'div',
-      { class: `card ${id === d.clan ? 'selected' : ''}` },
+      { class: `card clan-card ${id === d.clan ? 'selected' : ''}` },
+      portrait(clanArt(id), 'portrait-card'),
       button(id === d.clan ? `${t('create.selectedMark')} ${CLANS[id].name}` : CLANS[id].name, () => {
         d.clan = id;
         ctx.rerender();
@@ -118,7 +120,7 @@ export const CreateScreen: ScreenRenderer = (ctx) => {
         { class: 'panel screen' },
         h('label', {}, t('create.name'), ' ', nameInput),
         h('h3', {}, t('create.clan')),
-        h('div', { class: 'grid-2' }, ...clanCards),
+        h('div', { class: 'clan-grid' }, ...clanCards),
         h('label', {}, t('create.affinity'), ' ', affinitySelect, clan.fixedAffinity ? ` ${t('create.affinityFixed')}` : ''),
         h('label', {}, t('create.titleLabel'), ' ', titleSelect),
       ),

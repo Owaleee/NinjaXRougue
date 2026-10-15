@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { Combatant } from '../game/combat/types';
 import type { GameEvent } from '../game/events';
+import { CHARACTER_FACING, clanArt, enemyArt } from '../data/art';
 import { EFFECTS } from '../data/effects';
 import { JUTSUS } from '../data/jutsus';
 import { t } from '../i18n/pt-BR';
@@ -19,12 +20,19 @@ const ELEMENT_COLOR: Record<string, number> = {
 const PLAYER_COLOR = 0x4f7cff;
 const FONT = 'system-ui, -apple-system, Segoe UI, sans-serif';
 
+/** Altura do sprite na arena (o canvas tem 720 px; o HUD cobre o topo e a base). */
+const SPRITE_HEIGHT = 280;
+const FIGHTER_Y = 370;
+
 interface Fighter {
   container: Phaser.GameObjects.Container;
-  body: Phaser.GameObjects.Rectangle;
+  /** Sprite com a arte do personagem, ou o retângulo placeholder se a textura faltar. */
+  body: Phaser.GameObjects.Image | Phaser.GameObjects.Rectangle;
   aura: Phaser.GameObjects.Arc;
   baseX: number;
   color: number;
+  /** Altura visual do corpo (para posicionar textos flutuantes acima da cabeça). */
+  height: number;
 }
 
 /**
@@ -41,7 +49,8 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.add.rectangle(640, 600, 1280, 240, 0x1d2a20);
+    // Chão começa na altura dos pés dos lutadores.
+    this.add.rectangle(640, 615, 1280, 210, 0x1d2a20);
     this.queue = new AnimationQueue((step) => this.play(step), () => this.store.animationsDone());
     this.unsubscribe = this.store.onBattleEvents((events) => {
       if (events.some((e) => e.type === 'battleStart')) this.resetFighters();
@@ -60,14 +69,31 @@ export class BattleScene extends Phaser.Scene {
     for (const f of this.fighters.values()) f.container.destroy();
     this.fighters.clear();
     for (const c of this.combatants()) {
-      const x = c.side === 'player' ? 400 : 880;
+      const x = c.side === 'player' ? 420 : 860;
       const color = c.side === 'player' ? PLAYER_COLOR : (ELEMENT_COLOR[c.element ?? 'none'] ?? ELEMENT_COLOR['none']!);
-      const aura = this.add.circle(0, 0, 115, 0xff2a2a, 0.22).setVisible(false);
-      const body = this.add.rectangle(0, 0, 110, 170, color).setStrokeStyle(3, 0xffffff, 0.6);
-      const label = this.add.text(0, -115, c.name, { fontFamily: FONT, fontSize: '20px', color: '#e8e6e1' }).setOrigin(0.5);
-      const container = this.add.container(x, 430, [aura, body, label]);
-      this.fighters.set(c.id, { container, body, aura, baseX: x, color });
+      const art = c.side === 'player' ? clanArt(c.clan) : enemyArt(c.templateId);
+      const { body, height } = this.makeBody(art, c.side, color);
+      const shadow = this.add.ellipse(0, height / 2 - 6, height * 0.55, 26, 0x000000, 0.35);
+      const aura = this.add.circle(0, 0, height * 0.55, 0xff2a2a, 0.22).setVisible(false);
+      const label = this.add
+        .text(0, -height / 2 - 18, c.name, { fontFamily: FONT, fontSize: '20px', color: '#e8e6e1', stroke: '#000000', strokeThickness: 4 })
+        .setOrigin(0.5);
+      const container = this.add.container(x, FIGHTER_Y, [shadow, aura, body, label]);
+      this.fighters.set(c.id, { container, body, aura, baseX: x, color, height });
     }
+  }
+
+  /** Sprite do personagem; sem a textura (arquivo faltando) volta ao retângulo placeholder. */
+  private makeBody(art: string, side: 'player' | 'enemy', color: number): { body: Fighter['body']; height: number } {
+    if (!this.textures.exists(art)) {
+      return { body: this.add.rectangle(0, 0, 110, 170, color).setStrokeStyle(3, 0xffffff, 0.6), height: 170 };
+    }
+    const img = this.add.image(0, 0, art);
+    img.setScale(SPRITE_HEIGHT / img.height);
+    // Jogador olha para a direita, inimigo para a esquerda.
+    const facing = CHARACTER_FACING[art as keyof typeof CHARACTER_FACING] ?? 'right';
+    img.setFlipX(side === 'player' ? facing === 'left' : facing === 'right');
+    return { body: img, height: SPRITE_HEIGHT };
   }
 
   /**
@@ -134,15 +160,22 @@ export class BattleScene extends Phaser.Scene {
   private flash(id: string, color: number): void {
     const f = this.fighters.get(id);
     if (!f) return;
-    f.body.setFillStyle(color);
-    this.time.delayedCall(150, () => f.body.setFillStyle(f.color));
+    const body = f.body;
+    if (body instanceof Phaser.GameObjects.Image) {
+      body.setTintFill(color);
+      // Volta ao tom da transformação se ela estiver ativa.
+      this.time.delayedCall(150, () => (f.aura.visible ? body.setTint(0xffb0b0) : body.clearTint()));
+    } else {
+      body.setFillStyle(color);
+      this.time.delayedCall(150, () => body.setFillStyle(f.color));
+    }
   }
 
   private float(id: string, text: string, color: string, size: number): void {
     const f = this.fighters.get(id);
     if (!f) return;
     const txt = this.add
-      .text(f.container.x, f.container.y - 150, text, { fontFamily: FONT, fontSize: `${size}px`, color, stroke: '#000000', strokeThickness: 4 })
+      .text(f.container.x, f.container.y - f.height / 2 - 40, text, { fontFamily: FONT, fontSize: `${size}px`, color, stroke: '#000000', strokeThickness: 4 })
       .setOrigin(0.5);
     this.tweens.add({ targets: txt, y: txt.y - 60, alpha: 0, duration: 900, onComplete: () => txt.destroy() });
   }
@@ -152,6 +185,12 @@ export class BattleScene extends Phaser.Scene {
     const f = this.fighters.get(id);
     if (!f) return;
     f.aura.setVisible(on);
-    f.body.setStrokeStyle(3, on ? 0xff2a2a : 0xffffff, on ? 1 : 0.6);
+    const body = f.body;
+    if (body instanceof Phaser.GameObjects.Image) {
+      if (on) body.setTint(0xffb0b0);
+      else body.clearTint();
+    } else {
+      body.setStrokeStyle(3, on ? 0xff2a2a : 0xffffff, on ? 1 : 0.6);
+    }
   }
 }
