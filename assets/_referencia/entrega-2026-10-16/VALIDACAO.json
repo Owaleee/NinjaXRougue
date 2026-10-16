@@ -1,0 +1,13 @@
+{
+  "total_arquivos": 555,
+  "erros": [],
+  "transparencia_svg_validada": 407,
+  "transparencia_png": 136,
+  "arquivos_por_formato": {
+    "SVG": 407,
+    "PNG": 136,
+    "WOFF2": 3,
+    "WEBP": 9
+  },
+  "png_nitidos": true
+}

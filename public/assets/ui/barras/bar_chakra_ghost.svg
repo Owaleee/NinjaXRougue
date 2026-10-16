@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="330" height="42" viewBox="0 0 330 42"><defs>
+<linearGradient id="barras-bar_chakra_ghost-metal" x1="0" y1="0" x2="0.1" y2="1"><stop stop-color="#f8d894"/><stop offset=".35" stop-color="#be8744"/><stop offset=".65" stop-color="#7c4c26"/><stop offset="1" stop-color="#edbd67"/></linearGradient>
+<linearGradient id="barras-bar_chakra_ghost-night" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#263749"/><stop offset=".4" stop-color="#162536"/><stop offset="1" stop-color="#0b1019"/></linearGradient>
+<linearGradient id="barras-bar_chakra_ghost-steel" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#657489"/><stop offset=".5" stop-color="#2e3b4e"/><stop offset="1" stop-color="#151b29"/></linearGradient>
+<linearGradient id="barras-bar_chakra_ghost-ember" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ffc47d"/><stop offset=".45" stop-color="#ef8c36"/><stop offset="1" stop-color="#a84426"/></linearGradient>
+<linearGradient id="barras-bar_chakra_ghost-scarlet" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fb8273"/><stop offset="1" stop-color="#8e2834"/></linearGradient>
+<linearGradient id="barras-bar_chakra_ghost-chroma" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#90e8ff"/><stop offset="1" stop-color="#2264bc"/></linearGradient>
+</defs><g opacity=".38"><polygon points="4,4 316,4 326,14 326,38 4,38" fill="#45a2ef" stroke="none" stroke-width="1" stroke-linejoin="miter"/><rect x="4" y="4" width="322" height="34" rx="0" fill="#eee8dc" stroke="none" stroke-width="1"/></g></svg>

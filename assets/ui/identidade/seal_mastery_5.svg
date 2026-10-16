@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="126" height="126" viewBox="0 0 126 126"><defs>
+<linearGradient id="metal" x1="0" y1="0" x2="0.1" y2="1"><stop stop-color="#f8d894"/><stop offset=".35" stop-color="#be8744"/><stop offset=".65" stop-color="#7c4c26"/><stop offset="1" stop-color="#edbd67"/></linearGradient>
+<linearGradient id="night" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#263749"/><stop offset=".4" stop-color="#162536"/><stop offset="1" stop-color="#0b1019"/></linearGradient>
+<linearGradient id="steel" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#657489"/><stop offset=".5" stop-color="#2e3b4e"/><stop offset="1" stop-color="#151b29"/></linearGradient>
+<linearGradient id="ember" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ffc47d"/><stop offset=".45" stop-color="#ef8c36"/><stop offset="1" stop-color="#a84426"/></linearGradient>
+<linearGradient id="scarlet" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fb8273"/><stop offset="1" stop-color="#8e2834"/></linearGradient>
+<linearGradient id="chroma" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#90e8ff"/><stop offset="1" stop-color="#2264bc"/></linearGradient>
+</defs><circle cx="63" cy="63" r="52" fill="#2b2739" stroke="url(#metal)" stroke-width="8"/><polygon points="63,17 78,49 111,54 85,77 91,110 63,94 35,110 41,77 15,54 48,49" fill="#f08a24" stroke="#0b101a" stroke-width="3" stroke-linejoin="miter"/></svg>
