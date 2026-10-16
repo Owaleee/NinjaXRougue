@@ -1,3 +1,4 @@
+import { screenBg, screenBgUrl } from '../data/art';
 import { t } from '../i18n/pt-BR';
 import type { GameStore, ScreenId } from '../store/GameStore';
 import { button, clear, h } from './dom';
@@ -71,6 +72,8 @@ export class App {
       this.lastScreen = s.screen;
     }
     const inBattle = s.screen === 'battle';
+    const bg = screenBg(s.screen, s.runEnd?.result);
+    document.body.style.backgroundImage = bg ? `linear-gradient(rgba(18, 20, 26, 0.72), rgba(18, 20, 26, 0.72)), url(${screenBgUrl(bg)})` : '';
     this.gameEl.classList.toggle('visible', inBattle);
     this.uiEl.classList.toggle('battle', inBattle);
     if (inBattle) this.battleView?.show();

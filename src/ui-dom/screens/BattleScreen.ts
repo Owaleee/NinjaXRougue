@@ -2,7 +2,7 @@ import { ATTR_NAMES } from '../../game/attributes';
 import { getEnemy, getPlayer } from '../../game/combat/battle';
 import type { Action, BattleState } from '../../game/combat/types';
 import { EFFECTS, REFORCO_ATTRS } from '../../data/effects';
-import { ATTR_ICON, ELEMENT_ICON, ITEM_ICON, type IconArt } from '../../data/art';
+import { ATTR_ICON, ITEM_ICON, UI_ICON, jutsuIconRef, type IconRef } from '../../data/art';
 import { ITEMS } from '../../data/items';
 import { JUTSUS } from '../../data/jutsus';
 import { pct, t } from '../../i18n/pt-BR';
@@ -66,12 +66,9 @@ function basicBlock(b: BattleState, kind: BasicKind): 'illusion' | 'toggled' | '
   return b.transformToggled ? 'toggled' : null;
 }
 
-/** Ícone do jutsu: o elemento, ou a categoria quando não tem elemento. */
-function jutsuIcon(id: string): IconArt | null {
-  const j = JUTSUS[id];
-  if (!j) return null;
-  if (j.element && ELEMENT_ICON[j.element]) return ELEMENT_ICON[j.element]!;
-  return j.category === 'taijutsu' ? 'soco' : j.category === 'genjutsu' ? 'olho' : j.category === 'fuinjutsu' ? 'pergaminho' : 'selo_maos';
+/** Ícone do jutsu: o desenho próprio da entrega de arte. */
+function jutsuIcon(id: string): IconRef | null {
+  return JUTSUS[id] ? jutsuIconRef(id) : null;
 }
 
 /** Motivo visível de um jutsu apagado (spec §10: nunca só pela cor). */
@@ -153,11 +150,11 @@ export const BattleScreen: ScreenRenderer = (ctx) => {
   const pv = combatantView(p, e);
   const transformLabel = pv.transformed ? t('battle.transformOff', { form }) : t('battle.transformOn', { form });
   const basic = [
-    button(t('battle.attack'), () => doAct(ctx, { type: 'attack' }), { icon: 'soco', disabled: off('attack'), attrs: { 'data-action': 'attack' } }),
-    button(t('battle.defend'), () => doAct(ctx, { type: 'defend' }), { icon: 'escudo', disabled: off('defend'), attrs: { 'data-action': 'defend' } }),
-    button(t('battle.meditate'), () => doAct(ctx, { type: 'meditate' }), { icon: 'redemoinho_agua', disabled: off('meditate'), attrs: { 'data-action': 'meditate' } }),
+    button(t('battle.attack'), () => doAct(ctx, { type: 'attack' }), { icon: UI_ICON('attack'), disabled: off('attack'), attrs: { 'data-action': 'attack' } }),
+    button(t('battle.defend'), () => doAct(ctx, { type: 'defend' }), { icon: UI_ICON('defend'), disabled: off('defend'), attrs: { 'data-action': 'defend' } }),
+    button(t('battle.meditate'), () => doAct(ctx, { type: 'meditate' }), { icon: UI_ICON('meditate'), disabled: off('meditate'), attrs: { 'data-action': 'meditate' } }),
     button(t('battle.item'), () => toggleItems(ctx), {
-      icon: 'bolsa',
+      icon: UI_ICON('item'),
       disabled: off('item'),
       attrs: { 'data-action': 'item', 'aria-expanded': String(ui.items) },
     }),
@@ -165,7 +162,7 @@ export const BattleScreen: ScreenRenderer = (ctx) => {
       ? button(
           basicBlock(battle, 'transform') === 'toggled' ? t('battle.withReason', { label: transformLabel, reason: t('battle.reason.toggled') }) : transformLabel,
           () => doAct(ctx, { type: 'transform' }),
-          { icon: 'olho', disabled: off('transform'), attrs: { 'data-action': 'transform' } },
+          { icon: UI_ICON('transform'), disabled: off('transform'), attrs: { 'data-action': 'transform' } },
         )
       : null,
   ];

@@ -5,17 +5,17 @@ import { JUTSUS } from '../../data/jutsus';
 import { t, type I18nKey } from '../../i18n/pt-BR';
 import { allocationPanel } from '../components/allocation';
 import { runHeader } from '../components/runHeader';
-import type { IconArt } from '../../data/art';
+import { ITEM_ICON, svg, type IconRef } from '../../data/art';
 import { button, h } from '../dom';
 import type { ScreenRenderer } from '../types';
 import { jutsuGoals } from '../view/derived';
 
-const REWARD_ICON: Record<RewardOptionId, IconArt> = {
-  kit: 'cura',
-  pilula: 'pocao',
-  reforco: 'pergaminho',
-  ryo: 'bolsa',
-  treino: 'aumento_nivel',
+const REWARD_ICON: Record<RewardOptionId, IconRef> = {
+  kit: ITEM_ICON.kit_medico!,
+  pilula: ITEM_ICON.pilula_chakra!,
+  reforco: ITEM_ICON.pergaminho_reforco!,
+  ryo: svg('item', 'reward_ryo'),
+  treino: svg('item', 'reward_treino'),
 };
 
 const REWARD_TEXT: Record<RewardOptionId, { name: I18nKey; desc: I18nKey }> = {

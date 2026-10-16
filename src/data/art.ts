@@ -73,36 +73,80 @@ export function characterUrl(art: CharacterArt): string {
   return `${ART_BASE}personagens/${art}.png`;
 }
 
-export function iconUrl(icon: IconArt): string {
-  return `${ART_BASE}icones/${icon}.png`;
+/** Ícones vetoriais da entrega de arte: assets/icones/<tipo>/<id>.svg (ver tools/prepare-assets.py). */
+export type IconKind = 'jutsu' | 'item' | 'effect' | 'attr' | 'element' | 'category' | 'grade' | 'clan' | 'title' | 'ui' | 'menu' | 'style' | 'preset';
+export interface SvgIcon {
+  kind: IconKind;
+  id: string;
+}
+/** Um ícone é um PNG antigo (por nome) ou um SVG novo (tipo + id do dado). */
+export type IconRef = IconArt | SvgIcon;
+
+export const svg = (kind: IconKind, id: string): SvgIcon => ({ kind, id });
+
+export function svgIconUrl(kind: IconKind, id: string, locked = false): string {
+  return `${ART_BASE}icones/${kind}/${id}${locked ? '_locked' : ''}.svg`;
 }
 
-export const ATTR_ICON: Record<AttrKey, IconArt> = {
-  hp: 'coracao',
-  tai: 'soco',
-  nin: 'selo_maos',
-  gen: 'olho',
-  vel: 'bota_velocidade',
-  int: 'redemoinho_agua',
-  crit: 'shuriken',
-  def: 'escudo',
+export function iconUrl(icon: IconRef): string {
+  return typeof icon === 'string' ? `${ART_BASE}icones/${icon}.png` : svgIconUrl(icon.kind, icon.id);
+}
+
+export const ATTR_ICON: Record<AttrKey, IconRef> = {
+  hp: svg('attr', 'hp'),
+  tai: svg('attr', 'tai'),
+  nin: svg('attr', 'nin'),
+  gen: svg('attr', 'gen'),
+  vel: svg('attr', 'vel'),
+  int: svg('attr', 'int'),
+  crit: svg('attr', 'crit'),
+  def: svg('attr', 'def'),
 };
 
-/** Raio ainda não tem ícone (só entra na F2). */
-export const ELEMENT_ICON: Partial<Record<Element, IconArt>> = {
-  fogo: 'fogo',
-  vento: 'vento',
-  terra: 'pedras',
-  agua: 'onda_agua',
+export const ELEMENT_ICON: Record<Element, IconRef> = {
+  fogo: svg('element', 'fogo'),
+  vento: svg('element', 'vento'),
+  terra: svg('element', 'terra'),
+  agua: svg('element', 'agua'),
+  raio: svg('element', 'raio'),
 };
 
-export const ITEM_ICON: Record<string, IconArt> = {
-  kit_medico: 'cura',
-  pilula_chakra: 'pocao',
-  pergaminho_reforco: 'pergaminho',
-  kunai: 'shuriken',
-  katana: 'shuriken',
-  colete_ninja: 'armadura',
-  colete_reforcado: 'armadura',
-  pergaminho_raro: 'pergaminho',
+export const ITEM_ICON: Record<string, IconRef> = {
+  kit_medico: svg('item', 'kit_medico'),
+  pilula_chakra: svg('item', 'pilula_chakra'),
+  pergaminho_reforco: svg('item', 'pergaminho_reforco'),
+  kunai: svg('item', 'kunai'),
+  katana: svg('item', 'katana'),
+  colete_ninja: svg('item', 'colete_ninja'),
+  colete_reforcado: svg('item', 'colete_reforcado'),
+  pergaminho_raro: svg('item', 'pergaminho_raro'),
 };
+
+/** Ícone do jutsu pelo id (a entrega tem um por jutsu). */
+export const jutsuIconRef = (id: string): SvgIcon => svg('jutsu', id);
+
+/** Ações da batalha e recompensas. */
+export const UI_ICON = (id: string): SvgIcon => svg('ui', id);
+
+/** Fundos de tela da entrega de arte (assets/cenarios/tela/<fundo>.webp). */
+export type ScreenBg = 'menu' | 'criacao' | 'mapa' | 'preparacao' | 'resultado' | 'fim_vitoria' | 'fim_morte' | 'biblioteca' | 'erro';
+export const SCREEN_BGS: ScreenBg[] = ['menu', 'criacao', 'mapa', 'preparacao', 'resultado', 'fim_vitoria', 'fim_morte', 'biblioteca', 'erro'];
+
+export function screenBgUrl(bg: ScreenBg): string {
+  return `${ART_BASE}cenarios/tela/${bg}.webp`;
+}
+
+/** Qual fundo cada tela usa. A batalha não usa: o Phaser desenha a arena. */
+export function screenBg(screen: string, runResult?: 'victory' | 'dead' | 'abandoned' | null): ScreenBg | null {
+  switch (screen) {
+    case 'menu': return 'menu';
+    case 'create': return 'criacao';
+    case 'map': return 'mapa';
+    case 'prep': return 'preparacao';
+    case 'result': return 'resultado';
+    case 'runEnd': return runResult === 'victory' ? 'fim_vitoria' : 'fim_morte';
+    case 'sheet': case 'encyclopedia': case 'history': case 'titles': return 'biblioteca';
+    case 'error': return 'erro';
+    default: return null;
+  }
+}

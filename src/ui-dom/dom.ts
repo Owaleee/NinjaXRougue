@@ -4,7 +4,7 @@
  * REGRA DE SEGURANÇA: texto entra sempre como nó de texto (nunca innerHTML),
  * então um nome como "<img onerror=...>" aparece literal e não executa nada.
  */
-import { characterUrl, iconUrl, type CharacterArt, type IconArt } from '../data/art';
+import { characterUrl, iconUrl, type CharacterArt, type IconRef } from '../data/art';
 
 export type Child = Node | string | number | null | undefined | false;
 
@@ -49,7 +49,7 @@ export function clear(el: Element): void {
 export function button(
   label: string,
   onClick: () => void,
-  opts: { primary?: boolean; disabled?: boolean; title?: string; class?: string; attrs?: Record<string, string>; icon?: IconArt | null } = {},
+  opts: { primary?: boolean; disabled?: boolean; title?: string; class?: string; attrs?: Record<string, string>; icon?: IconRef | null } = {},
 ): HTMLButtonElement {
   const cls = [opts.primary ? 'primary' : '', opts.icon ? 'with-icon' : '', opts.class ?? ''].join(' ').trim();
   return h(
@@ -61,7 +61,7 @@ export function button(
 }
 
 /** Ícone decorativo: o texto ao lado sempre diz o que é (alt vazio, fora do leitor de tela). */
-export function icon(name: IconArt | null | undefined, size: 'sm' | 'md' | 'lg' = 'sm'): HTMLImageElement | null {
+export function icon(name: IconRef | null | undefined, size: 'sm' | 'md' | 'lg' = 'sm'): HTMLImageElement | null {
   if (!name) return null;
   return h('img', { class: `icon icon-${size}`, attrs: { src: iconUrl(name), alt: '', 'aria-hidden': 'true', draggable: 'false' } });
 }

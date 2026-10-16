@@ -1,3 +1,5 @@
+@font-face { font-family: 'NTX Titulo'; src: url('/assets/fontes/titulo.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'NTX Texto'; src: url('/assets/fontes/texto.woff2') format('woff2'); font-display: swap; }
 /* Tokens de cor e tamanho. Toda cor da interface sai daqui. */
 :root {
   --bg: #12141a;
@@ -16,14 +18,14 @@
   --chakra: #3a7bd5;
   --radius: 8px;
   --gap: 12px;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'NTX Texto', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   color: var(--text);
   background: var(--bg);
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 1024px; background: var(--bg); }
-h1, h2, h3 { margin: 0 0 var(--gap); }
+body { margin: 0; min-width: 1024px; background: var(--bg) center / cover fixed no-repeat; }
+h1, h2, h3 { margin: 0 0 var(--gap); font-family: 'NTX Titulo', 'NTX Texto', system-ui, sans-serif; }
 button {
   font: inherit; color: var(--text); background: var(--panel-2);
   border: 1px solid var(--line); border-radius: var(--radius);
