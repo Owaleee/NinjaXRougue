@@ -2,8 +2,8 @@ import { ATTR_NAMES, sumAttributes } from '../../game/attributes';
 import { PRESET_IDS, presetAllocation } from '../../game/progression/presets';
 import { ATTR_KEYS, type Attributes } from '../../game/types';
 import { t } from '../../i18n/pt-BR';
-import { ATTR_ICON } from '../../data/art';
-import { button, h, icon } from '../dom';
+import { attrLabel } from './attrLabel';
+import { button, h } from '../dom';
 
 export interface AllocationOpts {
   /** Atributos base atuais (antes do rascunho). */
@@ -22,7 +22,7 @@ export function allocationPanel(o: AllocationOpts): HTMLElement {
     h(
       'tr',
       {},
-      h('td', {}, h('span', { class: 'with-icon' }, icon(ATTR_ICON[k]), ATTR_NAMES[k])),
+      h('td', {}, attrLabel(k)),
       h('td', {}, o.draft[k] > 0 ? `${o.base[k]} → ${o.base[k] + o.draft[k]}` : String(o.base[k])),
       h(
         'td',

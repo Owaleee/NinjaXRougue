@@ -117,6 +117,16 @@ describe('Ficha do Ninja', () => {
 });
 
 describe('Ficha — base vs efetivo e motivos', () => {
+  it('Atributos mostra o tooltip nas 8 linhas, com o texto do i18n', () => {
+    const { store } = scenario();
+    const root = mount(store);
+    store.go('sheet');
+    q(root, '[data-tab=atributos]').click();
+    const tips = Array.from(root.querySelectorAll<HTMLElement>('[data-tip]'));
+    expect(tips.length).toBe(8);
+    expect(tips.find((e) => e.textContent === 'Velocidade')?.dataset.tip).toContain('esquivar');
+  });
+
   it('Atributos mostra Taijutsu base 5 e efetivo 9 com a katana equipada', () => {
     const { store } = scenario((run) => {
       run.character.ownedEquipment = ['katana'];

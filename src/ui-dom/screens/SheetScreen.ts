@@ -16,8 +16,8 @@ import { TITLES } from '../../data/titles';
 import { num, pct, t, type I18nKey } from '../../i18n/pt-BR';
 import { tabBar } from '../components/tabBar';
 import { radarSvg } from '../components/radar';
-import { ATTR_ICON } from '../../data/art';
-import { bar, button, h, icon } from '../dom';
+import { attrLabel } from '../components/attrLabel';
+import { bar, button, h } from '../dom';
 import type { ScreenRenderer } from '../types';
 import { bonusText } from '../view/format';
 import { fightingStyle, jutsuGoals, ninjaPower } from '../view/derived';
@@ -91,7 +91,7 @@ function attributes(run: RunState): HTMLElement {
         'table',
         {},
         h('tr', {}, h('th', {}, t('sheet.attr')), h('th', {}, t('sheet.base')), h('th', {}, t('sheet.effective'))),
-        ...ATTR_KEYS.map((k) => h('tr', {}, h('td', {}, h('span', { class: 'with-icon' }, icon(ATTR_ICON[k]), ATTR_NAMES[k])), h('td', {}, String(c.baseAttrs[k])), h('td', {}, String(eff[k])))),
+        ...ATTR_KEYS.map((k) => h('tr', {}, h('td', {}, attrLabel(k)), h('td', {}, String(c.baseAttrs[k])), h('td', {}, String(eff[k])))),
       ),
       h(
         'table',
