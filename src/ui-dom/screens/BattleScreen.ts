@@ -185,7 +185,7 @@ export const BattleScreen: ScreenRenderer = (ctx) => {
   const details = selected
     ? h(
         'div',
-        { class: 'panel' },
+        { class: 'panel jutsu-detail' },
         h('strong', {}, selected.name),
         h('p', {}, selected.description),
         button(t('battle.use'), () => doAct(ctx, { type: 'jutsu', jutsuId: selected.id }), { primary: true, disabled: !live }),
@@ -236,7 +236,7 @@ export const BattleScreen: ScreenRenderer = (ctx) => {
       fighterPanel(ctx, combatantView(e, p), 'enemy'),
     ),
     h('div', {}),
-    h('div', { class: 'grid-2' }, logEl, h('div', { class: 'screen' }, details, items, reforco, h('div', { class: 'action-bar' }, ...basic, ...jutsus))),
+    h('div', { class: 'grid-2 battle-bottom' }, logEl, h('div', { class: 'screen' }, details, items, reforco, h('div', { class: 'action-bar' }, h('div', { class: 'basic-row' }, ...basic), h('div', { class: 'jutsu-grid' }, ...jutsus)))),
   );
 };
 

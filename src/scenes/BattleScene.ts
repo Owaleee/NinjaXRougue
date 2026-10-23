@@ -21,8 +21,8 @@ const PLAYER_COLOR = 0x4f7cff;
 const FONT = 'system-ui, -apple-system, Segoe UI, sans-serif';
 
 /** Altura do sprite na arena (o canvas tem 720 px; o HUD cobre o topo e a base). */
-const SPRITE_HEIGHT = 280;
-const FIGHTER_Y = 370;
+const SPRITE_HEIGHT = 240;
+const FIGHTER_Y = 345;
 
 interface Fighter {
   container: Phaser.GameObjects.Container;

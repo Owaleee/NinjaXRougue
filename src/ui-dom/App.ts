@@ -73,7 +73,7 @@ export class App {
     }
     const inBattle = s.screen === 'battle';
     const bg = screenBg(s.screen, s.runEnd?.result);
-    document.body.style.backgroundImage = bg ? `linear-gradient(rgba(18, 20, 26, 0.72), rgba(18, 20, 26, 0.72)), url(${screenBgUrl(bg)})` : '';
+    document.body.style.backgroundImage = bg ? `linear-gradient(rgba(18, 20, 26, 0.22), rgba(18, 20, 26, 0.22)), url(${screenBgUrl(bg)})` : '';
     this.gameEl.classList.toggle('visible', inBattle);
     this.uiEl.classList.toggle('battle', inBattle);
     if (inBattle) this.battleView?.show();

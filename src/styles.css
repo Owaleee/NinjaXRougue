@@ -73,29 +73,46 @@ td, th { padding: 4px 8px; text-align: left; border-bottom: 1px solid var(--line
 .node.current { border-color: var(--accent); color: var(--accent); font-weight: 600; }
 .node.boss { border-style: double; border-width: 3px; }
 
+/* Título sobre o fundo de tela: placa local para manter a leitura com o fundo mais claro */
+.screen > h1, .screen > h2 { align-self: flex-start; padding: 4px 16px; background: rgba(18, 20, 26, 0.82); border-radius: var(--radius); }
+.radar { max-width: 100%; height: auto; }
+
 /* Batalha */
-.battle-hud { position: relative; min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; gap: var(--gap); padding: 16px; }
+.battle-hud { position: relative; min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; gap: 8px; padding: 12px 16px; }
 .fighters { display: grid; grid-template-columns: 340px 1fr 340px; gap: var(--gap); }
 .fighter { background: rgba(28, 31, 40, 0.92); }
 .effects { display: flex; gap: 4px; flex-wrap: wrap; min-height: 24px; }
 .effect-chip { font-size: 0.8em; padding: 1px 6px; border-radius: 4px; background: var(--panel-2); border: 1px solid var(--effect); }
 .turn-indicator { text-align: center; font-weight: 600; }
-.battle-log { background: rgba(18, 20, 26, 0.92); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; height: 220px; overflow-y: auto; font-size: 0.9em; align-self: end; }
+.battle-log { background: rgba(18, 20, 26, 0.92); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; height: 150px; overflow-y: auto; font-size: 0.9em; align-self: end; }
 .log-player { color: #8fd0ff; }
 .log-enemy { color: #ffb08a; }
 .log-damage { color: var(--bad); }
 .log-heal { color: var(--heal); }
 .log-effect { color: var(--effect); }
 .log-system { color: var(--muted); }
-.action-bar { display: flex; gap: 8px; flex-wrap: wrap; background: rgba(28, 31, 40, 0.95); padding: 12px; border-radius: var(--radius); border: 1px solid var(--line); }
-.action-bar .jutsu { min-width: 150px; text-align: left; }
+.action-bar { display: flex; flex-direction: column; gap: 6px; background: rgba(28, 31, 40, 0.95); padding: 8px; border-radius: var(--radius); border: 1px solid var(--line); }
+.action-bar button { padding: 5px 10px; font-size: 14px; }
+.basic-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.jutsu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.action-bar .jutsu { text-align: left; }
+/* Descrição do jutsu: uma faixa baixa, para não cobrir os lutadores (1024×576 a 1280×800) */
+.jutsu-detail { display: flex; align-items: center; gap: var(--gap); padding: 8px 12px; }
+.jutsu-detail p { margin: 0; flex: 1; font-size: 0.9em; }
+.battle-bottom { align-self: end; align-items: end; grid-template-columns: 1fr 2fr; }
+.battle-hud .fighters { grid-template-columns: 380px 1fr 380px; align-items: start; }
+.battle-hud .fighter { padding: 8px 12px; font-size: 13px; }
+.battle-hud .fighter .bar-wrap { display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: 8px; }
+.battle-hud .fighter .effects { min-height: 0; }
+.battle-hud .turn-indicator { align-self: start; justify-self: center; padding: 8px 20px; }
+.battle-bottom .panel.row { padding: 8px 12px; }
 .key { font-size: 0.75em; color: var(--muted); margin-right: 4px; }
 
 /* Arte (public/assets/, gerada por tools/prepare-assets.py) */
 .icon { object-fit: contain; flex: none; vertical-align: middle; }
-.icon-sm { width: 20px; height: 20px; }
-.icon-md { width: 28px; height: 28px; }
-.icon-lg { width: 40px; height: 40px; }
+.icon-sm { width: 28px; height: 28px; }
+.icon-md { width: 40px; height: 40px; }
+.icon-lg { width: 56px; height: 56px; }
 .with-icon { display: inline-flex; align-items: center; gap: 6px; }
 .has-tip { position: relative; cursor: help; border-bottom: 1px dotted var(--muted); }
 .has-tip::after {

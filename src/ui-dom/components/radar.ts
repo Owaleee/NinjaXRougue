@@ -34,18 +34,18 @@ function el<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, 
 }
 
 /** Gráfico octogonal da Ficha (DD v2 §14): contorno = base, preenchido = efetivo. */
-export function radarSvg(base: Attributes, effective: Attributes, size = 240): SVGSVGElement {
+export function radarSvg(base: Attributes, effective: Attributes, size = 320): SVGSVGElement {
   const c = size / 2;
-  const radius = size / 2 - 28;
+  const radius = size / 2 - 56;
   const max = Math.max(10, ...ATTR_KEYS.map((k) => effective[k]));
-  const svg = el('svg', { viewBox: `0 0 ${size} ${size}`, width: String(size), height: String(size), role: 'img', 'aria-label': t('radar.label') });
+  const svg = el('svg', { viewBox: `0 0 ${size} ${size}`, width: String(size), height: String(size), class: 'radar', role: 'img', 'aria-label': t('radar.label') });
   svg.appendChild(el('polygon', { points: radarPoints(ATTR_KEYS.map(() => max), max, radius, c, c), fill: 'none', stroke: 'var(--line)' }));
   svg.appendChild(el('polygon', { points: radarPoints(ATTR_KEYS.map((k) => effective[k]), max, radius, c, c), fill: 'rgba(240,138,36,0.35)', stroke: 'var(--accent)' }));
   svg.appendChild(el('polygon', { points: radarPoints(ATTR_KEYS.map((k) => base[k]), max, radius, c, c), fill: 'none', stroke: 'var(--accent-2)', 'stroke-dasharray': '4 3' }));
   const labels = radarPoints(ATTR_KEYS.map(() => max), max, radius + 16, c, c).split(' ');
   ATTR_KEYS.forEach((k, i) => {
     const [x, y] = (labels[i] ?? '0,0').split(',');
-    const text = el('text', { x: x ?? '0', y: y ?? '0', 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: 'var(--text)', 'font-size': '11' });
+    const text = el('text', { x: x ?? '0', y: y ?? '0', 'text-anchor': 'middle', 'dominant-baseline': 'middle', fill: 'var(--text)', 'font-size': '13' });
     text.textContent = `${t(SHORT[k])} ${effective[k]}`;
     svg.appendChild(text);
   });
