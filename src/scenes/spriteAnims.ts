@@ -6,7 +6,8 @@ import type { JutsuCategory } from '../game/types';
  * public/assets/sprites/<id>/{sheet.png,atlas.json}; o atlas traz `meta.animations`.
  * Sem o atlas (ou com meta inválido) a arena usa a imagem estática de sempre.
  */
-export type FighterAnim = 'idle' | 'attack' | 'cast' | 'hit' | 'death';
+export type FighterAnim = 'idle' | 'attack' | 'cast' | 'hit' | 'death' | 'dodge';
+/** `dodge` é opcional: sem ela o lutador só mostra o texto de esquiva. */
 export const REQUIRED_ANIMS: FighterAnim[] = ['idle', 'attack', 'cast', 'hit', 'death'];
 
 export interface AtlasAnim {
@@ -52,6 +53,8 @@ export function animForEvent(e: GameEvent, id: string, category: JutsuCategory |
       return e.actorId === id ? (category === 'taijutsu' ? 'attack' : 'cast') : null;
     case 'damage':
       return e.targetId === id ? 'hit' : null;
+    case 'dodge':
+      return e.targetId === id ? 'dodge' : null;
     case 'defeated':
       return e.targetId === id ? 'death' : null;
     default:

@@ -160,7 +160,7 @@ export class BattleScene extends Phaser.Scene {
 
   /** Toca a animação por quadros; as que não repetem voltam ao idle (menos a morte). */
   private playAnim(f: Fighter, anim: FighterAnim): void {
-    if (!f.meta || !(f.body instanceof Phaser.GameObjects.Sprite) || f.dead) return;
+    if (!f.meta?.animations[anim] || !(f.body instanceof Phaser.GameObjects.Sprite) || f.dead) return;
     const sprite = f.body;
     sprite.off(Phaser.Animations.Events.ANIMATION_COMPLETE);
     sprite.play(animKey(f.art, anim));

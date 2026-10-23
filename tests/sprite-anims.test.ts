@@ -9,6 +9,7 @@ const ev = {
   fire: { type: 'jutsuUsed', actorId: 'p', jutsuId: 'bola_de_fogo_basica', cost: 8 },
   damage: { type: 'damage', sourceId: 'p', targetId: 'e', amount: 5, crit: false, elementMult: 1, jutsuId: null, hpAfter: 10 },
   defeated: { type: 'defeated', targetId: 'e' },
+  dodge: { type: 'dodge', sourceId: 'p', targetId: 'e' },
 } as const;
 
 describe('animação dos lutadores', () => {
@@ -30,6 +31,8 @@ describe('animação dos lutadores', () => {
     expect(animForEvent(ev.damage, 'e', null)).toBe('hit');
     expect(animForEvent(ev.damage, 'p', null)).toBeNull();
     expect(animForEvent(ev.defeated, 'e', null)).toBe('death');
+    expect(animForEvent(ev.dodge, 'e', null)).toBe('dodge');
+    expect(animForEvent(ev.dodge, 'p', null)).toBeNull();
   });
 
   it('chave do atlas e leitura do meta.animations do atlas.json', () => {
