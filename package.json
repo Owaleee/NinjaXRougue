@@ -1,0 +1,39 @@
+{
+  "name": "ninja-x-rogue",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "version": "1.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "sim": "tsx tools/simulate.ts",
+    "sim:check": "tsx tools/simulate.ts --check",
+    "docs:check": "tsx tools/docs-check.ts",
+    "visual": "node tools/visual.mjs",
+    "art:build": "python3 tools/art/pack.py"
+  },
+  "dependencies": {
+    "phaser": "~3.88.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "happy-dom": "^21.0.1",
+    "playwright-core": "^1.64.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.4",
+    "vitest": "^5.0.4"
+  },
+  "allowScripts": {
+    "fsevents@2.3.3": true,
+    "esbuild@0.25.12": true
+  }
+}

@@ -1,0 +1,132 @@
+{
+ "personagens": {
+  "player_semclan": {
+   "bytes": 84806,
+   "frame": 192,
+   "anims": {
+    "idle": 6,
+    "attack": 7,
+    "cast": 7,
+    "hit": 4,
+    "death": 7,
+    "dodge": 4
+   },
+   "anchor": {
+    "x": 0.4167,
+    "y": 0.9271
+   }
+  },
+  "player_uchiha": {
+   "bytes": 76962,
+   "frame": 192,
+   "anims": {
+    "idle": 6,
+    "attack": 7,
+    "cast": 7,
+    "hit": 4,
+    "death": 7,
+    "dodge": 4
+   },
+   "anchor": {
+    "x": 0.4167,
+    "y": 0.9271
+   }
+  },
+  "player_uzumaki": {
+   "bytes": 68112,
+   "frame": 192,
+   "anims": {
+    "idle": 6,
+    "attack": 7,
+    "cast": 7,
+    "hit": 4,
+    "death": 7,
+    "dodge": 4
+   },
+   "anchor": {
+    "x": 0.4167,
+    "y": 0.9271
+   }
+  },
+  "inimigo_bandido": {
+   "bytes": 84979,
+   "frame": 192,
+   "anims": {
+    "idle": 6,
+    "attack": 7,
+    "cast": 7,
+    "hit": 4,
+    "death": 7,
+    "dodge": 4
+   },
+   "anchor": {
+    "x": 0.4167,
+    "y": 0.9271
+   }
+  },
+  "inimigo_renegado": {
+   "bytes": 90747,
+   "frame": 192,
+   "anims": {
+    "idle": 6,
+    "attack": 7,
+    "cast": 7,
+    "hit": 4,
+    "death": 7,
+    "dodge": 4
+   },
+   "anchor": {
+    "x": 0.4167,
+    "y": 0.9271
+   }
+  },
+  "inimigo_ninjaagua": {
+   "bytes": 101624,
+   "frame": 192,
+   "anims": {
+    "idle": 6,
+    "attack": 7,
+    "cast": 7,
+    "hit": 4,
+    "death": 7,
+    "dodge": 4
+   },
+   "anchor": {
+    "x": 0.4167,
+    "y": 0.9271
+   }
+  },
+  "chefe_zabuza": {
+   "bytes": 109339,
+   "frame": 256,
+   "anims": {
+    "idle": 6,
+    "attack": 7,
+    "cast": 7,
+    "hit": 4,
+    "death": 7,
+    "dodge": 4
+   },
+   "anchor": {
+    "x": 0.4,
+    "y": 0.9453
+   }
+  },
+  "chefe_haku": {
+   "bytes": 96848,
+   "frame": 224,
+   "anims": {
+    "idle": 6,
+    "attack": 7,
+    "cast": 7,
+    "hit": 4,
+    "death": 7,
+    "dodge": 4
+   },
+   "anchor": {
+    "x": 0.4167,
+    "y": 0.9375
+   }
+  }
+ }
+}

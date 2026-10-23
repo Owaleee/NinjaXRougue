@@ -1,0 +1,436 @@
+{
+ "efeitos": {
+  "fx_hit": {
+   "bytes": 54780,
+   "frame": 128,
+   "anims": {
+    "play": 7
+   },
+   "loop": false,
+   "fps": 18
+  },
+  "fx_hit_neutro": {
+   "bytes": 63131,
+   "frame": 128,
+   "anims": {
+    "play": 7
+   },
+   "loop": false,
+   "fps": 18
+  },
+  "fx_hit_fogo": {
+   "bytes": 71167,
+   "frame": 128,
+   "anims": {
+    "play": 8
+   },
+   "loop": false,
+   "fps": 16
+  },
+  "fx_hit_vento": {
+   "bytes": 30432,
+   "frame": 128,
+   "anims": {
+    "play": 8
+   },
+   "loop": false,
+   "fps": 18
+  },
+  "fx_hit_raio": {
+   "bytes": 52425,
+   "frame": 128,
+   "anims": {
+    "play": 7
+   },
+   "loop": false,
+   "fps": 18
+  },
+  "fx_hit_terra": {
+   "bytes": 54319,
+   "frame": 128,
+   "anims": {
+    "play": 8
+   },
+   "loop": false,
+   "fps": 16
+  },
+  "fx_hit_agua": {
+   "bytes": 22617,
+   "frame": 128,
+   "anims": {
+    "play": 8
+   },
+   "loop": false,
+   "fps": 16
+  },
+  "fx_slash": {
+   "bytes": 18891,
+   "frame": 128,
+   "anims": {
+    "play": 7
+   },
+   "loop": false,
+   "fps": 20
+  },
+  "fx_crit": {
+   "bytes": 167200,
+   "frame": 192,
+   "anims": {
+    "play": 8
+   },
+   "loop": false,
+   "fps": 16
+  },
+  "fx_dodge": {
+   "bytes": 21788,
+   "frame": 128,
+   "anims": {
+    "play": 6
+   },
+   "loop": false,
+   "fps": 18
+  },
+  "fx_fumaca": {
+   "bytes": 39929,
+   "frame": 128,
+   "anims": {
+    "play": 8
+   },
+   "loop": false,
+   "fps": 14
+  },
+  "fx_tronco": {
+   "bytes": 41990,
+   "frame": 128,
+   "anims": {
+    "play": 9
+   },
+   "loop": false,
+   "fps": 12
+  },
+  "fx_heal": {
+   "bytes": 57421,
+   "frame": 128,
+   "anims": {
+    "play": 10
+   },
+   "loop": false,
+   "fps": 14
+  },
+  "fx_chakra": {
+   "bytes": 129282,
+   "frame": 192,
+   "anims": {
+    "play": 8
+   },
+   "loop": true,
+   "fps": 12
+  },
+  "fx_defend": {
+   "bytes": 42120,
+   "frame": 128,
+   "anims": {
+    "play": 6
+   },
+   "loop": false,
+   "fps": 14
+  },
+  "fx_resisted": {
+   "bytes": 30731,
+   "frame": 128,
+   "anims": {
+    "play": 8
+   },
+   "loop": false,
+   "fps": 14
+  },
+  "fx_defeated": {
+   "bytes": 116116,
+   "frame": 192,
+   "anims": {
+    "play": 9
+   },
+   "loop": false,
+   "fps": 12
+  },
+  "fx_turn_marker": {
+   "bytes": 24291,
+   "frame": 128,
+   "anims": {
+    "play": 8
+   },
+   "loop": true,
+   "fps": 10
+  },
+  "fx_aura_sharingan": {
+   "bytes": 138479,
+   "frame": 192,
+   "anims": {
+    "play": 8
+   },
+   "loop": true,
+   "fps": 12
+  },
+  "fx_transform_on": {
+   "bytes": 144269,
+   "frame": 192,
+   "anims": {
+    "play": 7
+   },
+   "loop": false,
+   "fps": 16
+  },
+  "fx_bola_de_fogo": {
+   "bytes": 14857,
+   "frame": 128,
+   "anims": {
+    "play": 6
+   },
+   "loop": true,
+   "fps": 14
+  },
+  "fx_explosao": {
+   "bytes": 186202,
+   "frame": 192,
+   "anims": {
+    "play": 9
+   },
+   "loop": false,
+   "fps": 16
+  },
+  "fx_goukakyuu": {
+   "bytes": 87845,
+   "frame": 192,
+   "anims": {
+    "play": 6
+   },
+   "loop": true,
+   "fps": 12
+  },
+  "fx_daitoppa": {
+   "bytes": 59981,
+   "frame": 192,
+   "anims": {
+    "play": 8
+   },
+   "loop": true,
+   "fps": 14
+  },
+  "fx_suiryuudan": {
+   "bytes": 81131,
+   "frame": 192,
+   "anims": {
+    "play": 10
+   },
+   "loop": false,
+   "fps": 14
+  },
+  "fx_onda_agua": {
+   "bytes": 33860,
+   "frame": 192,
+   "anims": {
+    "play": 8
+   },
+   "loop": false,
+   "fps": 12
+  },
+  "fx_sennen_goroshi": {
+   "bytes": 43228,
+   "frame": 128,
+   "anims": {
+    "play": 8
+   },
+   "loop": false,
+   "fps": 14
+  },
+  "fx_investida": {
+   "bytes": 28031,
+   "frame": 192,
+   "anims": {
+    "play": 7
+   },
+   "loop": false,
+   "fps": 18
+  },
+  "fx_golpe_pesado": {
+   "bytes": 100857,
+   "frame": 192,
+   "anims": {
+    "play": 8
+   },
+   "loop": false,
+   "fps": 16
+  },
+  "fx_kunai": {
+   "bytes": 5673,
+   "frame": 128,
+   "anims": {
+    "play": 6
+   },
+   "loop": true,
+   "fps": 16
+  },
+  "fx_kubikiribouchou": {
+   "bytes": 73978,
+   "frame": 192,
+   "anims": {
+    "play": 8
+   },
+   "loop": false,
+   "fps": 18
+  },
+  "fx_nevoa": {
+   "bytes": 182069,
+   "frame": 192,
+   "anims": {
+    "play": 8
+   },
+   "loop": false,
+   "fps": 10
+  },
+  "fx_muon_satsujin": {
+   "bytes": 97915,
+   "frame": 192,
+   "anims": {
+    "play": 10
+   },
+   "loop": false,
+   "fps": 14
+  },
+  "fx_senbon": {
+   "bytes": 7163,
+   "frame": 128,
+   "anims": {
+    "play": 6
+   },
+   "loop": true,
+   "fps": 16
+  },
+  "fx_makyou": {
+   "bytes": 37199,
+   "frame": 192,
+   "anims": {
+    "play": 10
+   },
+   "loop": false,
+   "fps": 14
+  },
+  "fx_sensatsu": {
+   "bytes": 59334,
+   "frame": 192,
+   "anims": {
+    "play": 9
+   },
+   "loop": false,
+   "fps": 16
+  },
+  "st_queimadura": {
+   "bytes": 23320,
+   "frame": 128,
+   "anims": {
+    "play": 8
+   },
+   "loop": true,
+   "fps": 12
+  },
+  "st_imobilizado": {
+   "bytes": 44006,
+   "frame": 192,
+   "anims": {
+    "play": 8
+   },
+   "loop": true,
+   "fps": 10
+  },
+  "st_atordoado": {
+   "bytes": 16858,
+   "frame": 128,
+   "anims": {
+    "play": 8
+   },
+   "loop": true,
+   "fps": 12
+  },
+  "st_ilusao": {
+   "bytes": 52441,
+   "frame": 128,
+   "anims": {
+    "play": 8
+   },
+   "loop": true,
+   "fps": 10
+  },
+  "st_lentidao": {
+   "bytes": 13509,
+   "frame": 128,
+   "anims": {
+    "play": 8
+   },
+   "loop": true,
+   "fps": 8
+  },
+  "st_defesa_reduzida": {
+   "bytes": 22990,
+   "frame": 128,
+   "anims": {
+    "play": 6
+   },
+   "loop": true,
+   "fps": 8
+  },
+  "st_reforco": {
+   "bytes": 13668,
+   "frame": 192,
+   "anims": {
+    "play": 8
+   },
+   "loop": true,
+   "fps": 10
+  },
+  "st_tenacidade": {
+   "bytes": 25699,
+   "frame": 192,
+   "anims": {
+    "play": 6
+   },
+   "loop": true,
+   "fps": 10
+  },
+  "fx_doryuuheki": {
+   "bytes": 43694,
+   "frame": 192,
+   "anims": {
+    "play": 8
+   },
+   "loop": false,
+   "fps": 14
+  },
+  "fx_kai": {
+   "bytes": 48886,
+   "frame": 192,
+   "anims": {
+    "play": 7
+   },
+   "loop": false,
+   "fps": 16
+  },
+  "fx_kongou_fuusa": {
+   "bytes": 108409,
+   "frame": 192,
+   "anims": {
+    "play": 8
+   },
+   "loop": false,
+   "fps": 14
+  },
+  "fx_genjutsu_sharingan": {
+   "bytes": 104631,
+   "frame": 192,
+   "anims": {
+    "play": 9
+   },
+   "loop": false,
+   "fps": 12
+  }
+ }
+}
