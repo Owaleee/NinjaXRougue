@@ -13,9 +13,9 @@ export interface AnimStep {
 /** Duração de cada tipo de evento animado. Ausente = não anima. */
 export const DURATIONS: Partial<Record<GameEvent['type'], number>> = {
   battleStart: 400,
-  actionChosen: 250,
-  jutsuUsed: 350,
-  damage: 450,
+  actionChosen: 450,
+  jutsuUsed: 600,
+  damage: 500,
   dodge: 400,
   miss: 400,
   negated: 400,
@@ -29,7 +29,7 @@ export const DURATIONS: Partial<Record<GameEvent['type'], number>> = {
   controlledSkip: 350,
   transformOn: 450,
   transformOff: 300,
-  defeated: 600,
+  defeated: 800,
   battleEnd: 500,
 };
 

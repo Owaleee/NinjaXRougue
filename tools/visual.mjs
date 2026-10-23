@@ -82,6 +82,16 @@ for (const [w, h] of SIZES) {
   });
   if (m.bottomTop < m.feet) problems.push(`${tag} batalha: painel inferior (y=${Math.round(m.bottomTop)}) cobre os lutadores (pés em y=${Math.round(m.feet)})`);
   if (m.topBottom > m.head) problems.push(`${tag} batalha: painéis de cima (até y=${Math.round(m.topBottom)}) cobrem as cabeças (y=${Math.round(m.head)})`);
+  // Golpes em andamento: confere sprite animado e efeito (screenshots no meio da animação).
+  await p.keyboard.press('Escape');
+  await p.keyboard.press('a');
+  await p.waitForTimeout(380);
+  await shot('09-batalha-ataque');
+  await p.getByText('Seu turno').waitFor({ timeout: 8000 });
+  await p.keyboard.press('1');
+  await p.keyboard.press('Enter');
+  await p.waitForTimeout(450);
+  await shot('10-batalha-jutsu-em-uso');
   await p.close();
 }
 await browser.close();

@@ -40,12 +40,32 @@ const { storage, ok } = pickStorage();
 const store = new GameStore({ storage, now: () => Date.now(), newSeed });
 const app = new App(root, store, { screens: SCREENS, keys: KEYS, overlay: OVERLAY });
 app.mount();
+// Tela de carregamento (index.html): sai quando a arte da arena termina de carregar,
+// e nunca fica presa (se o Phaser falhar ou demorar, sai mesmo assim).
+const splash = document.getElementById('splash');
+const splashBar = document.getElementById('splash-bar');
+let splashGone = false;
+const hideSplash = () => {
+  if (splashGone) return;
+  splashGone = true;
+  splash?.classList.add('done');
+  window.setTimeout(() => splash?.remove(), 400);
+};
+window.setTimeout(hideSplash, 15000);
 let canvasOk = true;
 try {
-  app.setBattleView(createGame(app.gameLayer, store));
+  app.setBattleView(
+    createGame(app.gameLayer, store, {
+      onProgress: (p) => {
+        if (splashBar) splashBar.style.width = `${Math.round(p * 100)}%`;
+      },
+      onReady: hideSplash,
+    }),
+  );
 } catch {
   // Sem WebGL/canvas o jogo continua jogável: sem animador registrado, nada trava.
   canvasOk = false;
+  hideSplash();
 }
 store.boot();
 // Avisos só depois do boot: o boot substitui a lista de avisos.

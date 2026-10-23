@@ -88,6 +88,14 @@ export function svgIconUrl(kind: IconKind, id: string, locked = false): string {
   return `${ART_BASE}icones/${kind}/${id}${locked ? '_locked' : ''}.svg`;
 }
 
+/** Folha de quadros e atlas (JSON Array do Phaser) de um lutador animado; opcionais. */
+export function spriteSheetUrl(art: CharacterArt): string {
+  return `${ART_BASE}sprites/${art}/sheet.png`;
+}
+export function spriteAtlasUrl(art: CharacterArt): string {
+  return `${ART_BASE}sprites/${art}/atlas.json`;
+}
+
 export function iconUrl(icon: IconRef): string {
   return typeof icon === 'string' ? `${ART_BASE}icones/${icon}.png` : svgIconUrl(icon.kind, icon.id);
 }
@@ -149,4 +157,90 @@ export function screenBg(screen: string, runResult?: 'victory' | 'dead' | 'aband
     case 'error': return 'erro';
     default: return null;
   }
+}
+
+/** Efeitos visuais animados (public/assets/vfx/<nome>/{sheet.png,atlas.json}); ver tools/art/. */
+export const VFX_NAMES = [
+  'fx_hit', 'fx_hit_neutro', 'fx_hit_fogo', 'fx_hit_vento', 'fx_hit_raio', 'fx_hit_terra', 'fx_hit_agua', 'fx_slash', 'fx_crit', 'fx_dodge',
+  'fx_fumaca', 'fx_tronco', 'fx_heal', 'fx_chakra', 'fx_defend', 'fx_resisted', 'fx_defeated', 'fx_turn_marker', 'fx_aura_sharingan', 'fx_transform_on',
+  'fx_bola_de_fogo', 'fx_explosao', 'fx_goukakyuu', 'fx_daitoppa', 'fx_suiryuudan', 'fx_onda_agua', 'fx_sennen_goroshi', 'fx_investida', 'fx_golpe_pesado',
+  'fx_kunai', 'fx_kubikiribouchou', 'fx_nevoa', 'fx_muon_satsujin', 'fx_senbon', 'fx_makyou', 'fx_sensatsu', 'fx_doryuuheki', 'fx_kai', 'fx_kongou_fuusa',
+  'fx_genjutsu_sharingan', 'st_queimadura', 'st_imobilizado', 'st_atordoado', 'st_ilusao', 'st_lentidao', 'st_defesa_reduzida', 'st_reforco', 'st_tenacidade',
+] as const;
+export type VfxName = (typeof VFX_NAMES)[number];
+
+export const vfxSheetUrl = (n: VfxName): string => `${ART_BASE}vfx/${n}/sheet.png`;
+export const vfxAtlasUrl = (n: VfxName): string => `${ART_BASE}vfx/${n}/atlas.json`;
+export const VFX_MANIFEST_URL = `${ART_BASE}vfx/manifest.json`;
+
+/** Jutsu → efeito do golpe. Jutsu ausente aqui usa o efeito de impacto do elemento. */
+export const JUTSU_FX: Record<string, VfxName> = {
+  bola_de_fogo: 'fx_bola_de_fogo',
+  goukakyuu: 'fx_goukakyuu',
+  daitoppa: 'fx_daitoppa',
+  suiryuudan: 'fx_suiryuudan',
+  sennen_goroshi: 'fx_sennen_goroshi',
+  investida_ninja: 'fx_investida',
+  golpe_pesado: 'fx_golpe_pesado',
+  kunai_lancada: 'fx_kunai',
+  kubikiribouchou: 'fx_kubikiribouchou',
+  kirigakure: 'fx_nevoa',
+  muon_satsujin: 'fx_muon_satsujin',
+  senbon: 'fx_senbon',
+  makyou_hyoushou: 'fx_makyou',
+  sensatsu_suishou: 'fx_sensatsu',
+  kai: 'fx_kai',
+  doryuuheki: 'fx_doryuuheki',
+  kongou_fuusa: 'fx_kongou_fuusa',
+  genjutsu_sharingan: 'fx_genjutsu_sharingan',
+};
+/** Jutsus de suporte cujo efeito aparece no OPONENTE (os demais, em quem usa). */
+export const JUTSU_FX_ON_OPPONENT: ReadonlySet<string> = new Set(['kongou_fuusa', 'genjutsu_sharingan']);
+
+export const ELEMENT_HIT_FX: Record<Element, VfxName> = {
+  fogo: 'fx_hit_fogo',
+  vento: 'fx_hit_vento',
+  raio: 'fx_hit_raio',
+  terra: 'fx_hit_terra',
+  agua: 'fx_hit_agua',
+};
+
+/** Efeito (EffectDef.id) → marca visual ao ser aplicado. */
+export const STATUS_FX: Record<string, VfxName> = {
+  queimadura: 'st_queimadura',
+  imobilizado: 'st_imobilizado',
+  atordoado: 'st_atordoado',
+  ilusao: 'st_ilusao',
+  lentidao: 'st_lentidao',
+  defesa_reduzida: 'st_defesa_reduzida',
+  reforco_tai: 'st_reforco',
+  reforco_nin: 'st_reforco',
+  reforco_gen: 'st_reforco',
+  reforco_vel: 'st_reforco',
+  reforco_def: 'st_reforco',
+};
+
+/** Cenários de batalha em 3 camadas (public/assets/cenarios/batalha/<cenario>_<camada>.webp). */
+export const BATTLE_SCENES = ['estrada_floresta', 'costa_nevoa', 'lago_nevoa', 'ponte', 'acampamento'] as const;
+export type BattleScene = (typeof BATTLE_SCENES)[number];
+export const SCENE_LAYERS = ['ceu', 'meio', 'chao'] as const;
+export const sceneLayerUrl = (s: BattleScene, layer: (typeof SCENE_LAYERS)[number]): string => `${ART_BASE}cenarios/batalha/${s}_${layer}.webp`;
+export const OVERLAY_NEVOA_URL = `${ART_BASE}cenarios/batalha/overlay_nevoa.webp`;
+export const OVERLAY_GELO_URL = `${ART_BASE}cenarios/batalha/overlay_espelhos_gelo.webp`;
+export const LOADING_SCREEN_URL = `${ART_BASE}identidade/loading_screen.webp`;
+
+/** Em que cenário cada inimigo luta, e qual camada de efeito entra por cima. */
+const SCENE_OF_ENEMY: Record<string, { scene: BattleScene; overlay: 'nevoa' | 'gelo' | null }> = {
+  bandido: { scene: 'estrada_floresta', overlay: null },
+  bandido_veterano: { scene: 'estrada_floresta', overlay: null },
+  ninja_renegado: { scene: 'estrada_floresta', overlay: null },
+  renegado_veterano: { scene: 'estrada_floresta', overlay: null },
+  mercenario_nevoa: { scene: 'costa_nevoa', overlay: 'nevoa' },
+  mercenario_veterano: { scene: 'costa_nevoa', overlay: 'nevoa' },
+  zabuza: { scene: 'ponte', overlay: 'nevoa' },
+  haku: { scene: 'lago_nevoa', overlay: 'gelo' },
+};
+
+export function battleSceneFor(templateId: string | null): { scene: BattleScene; overlay: 'nevoa' | 'gelo' | null } {
+  return (templateId && SCENE_OF_ENEMY[templateId]) || { scene: 'estrada_floresta', overlay: null };
 }
