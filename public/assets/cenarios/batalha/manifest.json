@@ -1,0 +1,85 @@
+{
+ "cenarios": {
+  "estrada_floresta": {
+   "camadas": [
+    "ceu",
+    "meio",
+    "chao"
+   ],
+   "bytes": {
+    "ceu": 8476,
+    "meio": 48316,
+    "chao": 12880
+   },
+   "chao_y": 465
+  },
+  "costa_nevoa": {
+   "camadas": [
+    "ceu",
+    "meio",
+    "chao"
+   ],
+   "bytes": {
+    "ceu": 5904,
+    "meio": 24458,
+    "chao": 9820
+   },
+   "chao_y": 465
+  },
+  "lago_nevoa": {
+   "camadas": [
+    "ceu",
+    "meio",
+    "chao"
+   ],
+   "bytes": {
+    "ceu": 8878,
+    "meio": 44800,
+    "chao": 8402
+   },
+   "chao_y": 465
+  },
+  "ponte": {
+   "camadas": [
+    "ceu",
+    "meio",
+    "chao"
+   ],
+   "bytes": {
+    "ceu": 7462,
+    "meio": 31760,
+    "chao": 12078
+   },
+   "chao_y": 465
+  },
+  "acampamento": {
+   "camadas": [
+    "ceu",
+    "meio",
+    "chao"
+   ],
+   "bytes": {
+    "ceu": 8976,
+    "meio": 60646,
+    "chao": 11396
+   },
+   "chao_y": 465
+  },
+  "overlay_nevoa": {
+   "overlay": true,
+   "bytes": 36184,
+   "size": [
+    512,
+    512
+   ]
+  },
+  "overlay_espelhos_gelo": {
+   "overlay": true,
+   "bytes": 13838,
+   "size": [
+    1280,
+    720
+   ]
+  }
+ }
+}

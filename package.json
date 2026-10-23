@@ -16,7 +16,8 @@
     "sim": "tsx tools/simulate.ts",
     "sim:check": "tsx tools/simulate.ts --check",
     "docs:check": "tsx tools/docs-check.ts",
-    "visual": "node tools/visual.mjs"
+    "visual": "node tools/visual.mjs",
+    "art:build": "python3 tools/art/pack.py"
   },
   "dependencies": {
     "phaser": "~3.88.2",
